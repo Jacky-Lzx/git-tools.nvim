@@ -1,0 +1,34 @@
+*git-tools.txt*  Reusable text diffs and preview rendering
+
+API                                                  *git-tools-api*
+
+require("git_tools").diff and require("git_tools.diff") expose the same module.
+No setup, global mappings, commands or Git repository are required.
+
+diff.unified(before, after, opts)                      *git-tools-unified*
+    Return unified diff lines with labels, or {} for identical inputs.
+    Strings preserve final newlines. Lists contain terminated newline-free
+    lines; {} is empty text. opts.old_path/new_path label the inputs.
+    context=3 controls surrounding lines and accepts nonnegative integers.
+    No source buffers or files are modified or created.
+
+diff.render(view, lines, opts, valid)                  *git-tools-render*
+    Render into a host-owned window. view has win, is_cancelled(),
+    set_lines(lines,ft,title) and set_buffer(buf,metadata). set_buffer returns
+    false for an obsolete frame. Adopted owned=true frames must be deleted by
+    the host on replacement, rejection or close. Calls use the main thread.
+    opts.backend is "vim" (default) or "delta". delta accepts command="delta",
+    args={} and timeout=2000. cwd is explicit and never inferred from an LSP.
+    valid() is an optional additional validity check. Return handle:close()
+    and handle:resize(). The host keeps window and buffer lifecycle ownership.
+
+    Delta argv is literal; failures, empty output, missing executables and
+    timeouts fall back to native diff. Obsolete output is discarded.
+
+require("git_tools.integrations.selection").diff(opts)  *git-tools-selection*
+    Create an optional selection-tools preview provider for item.lines or
+    opts.lines(item). opts.cwd overrides item.root. Decline items without lines.
+    The adapter itself loads no picker. A callback owns edit validation and
+    application; this provider only displays already computed diffs.
+
+vim:tw=78:ts=8:noet:ft=help:norl:
