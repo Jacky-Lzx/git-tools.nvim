@@ -46,6 +46,12 @@ buffers); explicit `cwd` selects another repository. Linked worktrees and unusua
 filenames are supported. Queries/previews are asynchronous, bounded by a timeout,
 and cancelled on close or selection changes. `picker = { ... }` customizes the
 optional selection-tools UI. The picker dependency loads only when invoked.
+The changes picker supports multi-selection: `<C-s>` stages disk files,
+`<C-z>` unstages them, `<C-r>` confirms discarding tracked unstaged disk changes,
+and `<F5>` refreshes. Operations retain the picker and query. Mixed incompatible
+selections, conflicts, stale index/file snapshots and discarding an unsaved
+buffer are rejected. Untracked files are never deleted by Discard. These file
+actions use disk content; the buffer hunk APIs below use unsaved buffer text.
 
 ## History and blame
 

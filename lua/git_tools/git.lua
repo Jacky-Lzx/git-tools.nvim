@@ -27,7 +27,7 @@ function M.run(task, cwd, args, callback, opts)
     cwd = cwd,
     stdin = opts.stdin,
     timeout = opts.timeout or 10000,
-    env = { GIT_TERMINAL_PROMPT = "0", GIT_LITERAL_PATHSPECS = "1", LC_ALL = "C" },
+    env = { GIT_TERMINAL_PROMPT = "0", GIT_LITERAL_PATHSPECS = "1", GIT_OPTIONAL_LOCKS = "0", LC_ALL = "C" },
   }, function(output)
     vim.schedule(function()
       if process then

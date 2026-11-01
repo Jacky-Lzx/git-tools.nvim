@@ -43,6 +43,23 @@ p:set_query("sample")
 assert(vim.wait(1000, function()
   return p:current() ~= nil
 end, 5))
+p.opts.actions.stage(p)
+assert(
+  vim.wait(5000, function()
+    local item = p:current()
+    return item and item.kind == "staged"
+  end, 5),
+  "Stage must refresh the same picker"
+)
+p.opts.actions.unstage(p)
+assert(
+  vim.wait(5000, function()
+    local item = p:current()
+    return item and item.kind == "unstaged"
+  end, 5),
+  "Unstage must refresh the same picker"
+)
+assert(p.query == "sample", "Actions must preserve the filter")
 p:confirm()
 assert(vim.wait(1000, function()
   return vim.api.nvim_buf_get_name(0):match("sample.txt$") ~= nil

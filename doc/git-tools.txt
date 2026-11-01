@@ -12,6 +12,10 @@ require("git_tools").status(opts)                     *git-tools-status*
     enables ANSI previews. opts.picker customizes the selection-tools UI.
     Patches represent disk/index/HEAD, not unsaved buffer changes. Selection
     opens the working file at its first hunk. Git processes cancel on close.
+    Multi-select supported. C-s stages disk files; C-z unstages; C-r confirms
+    discarding tracked unstaged disk changes; F5 refreshes. Query is retained.
+    Rejects incompatible selections, conflicts, stale snapshots and discarding
+    unsaved buffers. Discard never deletes untracked files.
 
 git_tools.log(opts) / file_history(opts) / line_history(opts)
                                                      *git-tools-history*

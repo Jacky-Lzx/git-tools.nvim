@@ -1,6 +1,19 @@
 local git = require("git_tools.git")
 local M = {}
 
+local function stat(path)
+  local s = vim.uv.fs_lstat(path)
+  return s and { s.ino, s.size, s.mode, s.mtime.sec, s.mtime.nsec, s.ctime.sec, s.ctime.nsec } or false
+end
+
+function M.stamp(repo, item)
+  return vim.inspect({
+    stat(repo.git_dir .. "/index"),
+    stat(item.file),
+    item.old_path and stat(repo.root .. "/" .. item.old_path) or false,
+  })
+end
+
 -- Porcelain -z does not quote paths; rename records contain destination, source.
 function M.parse_status(output, root)
   local fields = vim.split(output, "\0", { plain = true })
@@ -45,7 +58,16 @@ end
 
 function M.status(task, repo, callback)
   git.run(task, repo.root, { "status", "--porcelain=v1", "-z", "--untracked-files=all" }, function(err, output)
-    callback(err, not err and M.parse_status(output, repo.root) or nil)
+    if err then
+      callback(err)
+      return
+    end
+    local items = M.parse_status(output, repo.root)
+    for _, item in ipairs(items) do
+      item.snapshot = M.stamp(repo, item)
+      item.git_dir = repo.git_dir
+    end
+    callback(nil, items)
   end)
 end
 
