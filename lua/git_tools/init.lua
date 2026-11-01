@@ -31,6 +31,8 @@ function M.setup(opts)
     local actions = {
       status = M.status,
       changes = M.changes,
+      branches = M.branches,
+      stash = M.stash,
       log = M.log,
       file_history = M.file_history,
       line_history = M.line_history,
@@ -68,6 +70,8 @@ function M.setup(opts)
       return {
         "status",
         "changes",
+        "branches",
+        "stash",
         "log",
         "file_history",
         "line_history",
@@ -140,6 +144,12 @@ function M.log(opts)
 end
 function M.changes(opts)
   return require("git_tools.changes").open(opts)
+end
+function M.branches(opts)
+  return require("git_tools.branches").open(opts)
+end
+function M.stash(opts)
+  return require("git_tools.stash").open(opts)
 end
 function M.file_history(opts)
   return M.log(vim.tbl_extend("force", {}, opts or {}, { file = true }))

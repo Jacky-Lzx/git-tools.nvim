@@ -80,8 +80,8 @@ function M.open(opts, callback)
   local path = opts.path or vim.api.nvim_buf_get_name(0)
   local word = opts.word
   if not word then
-    local ok, value = pcall(vim.fn.expand, "<cword>")
-    word = ok and value or ""
+    local line, col = vim.api.nvim_get_current_line(), vim.api.nvim_win_get_cursor(0)[2] + 1
+    word = (line:sub(1, col):match("([%w_]+)$") or "") .. (line:sub(col + 1):match("^([%w_]*)") or "")
   end
   local has_file = opts.path ~= nil or (vim.bo.buftype == "" and path ~= "")
   local task = git.task()

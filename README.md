@@ -82,7 +82,7 @@ are bounded by `limit` (default 200); increase it explicitly when needed.
 ## Remote links
 
 ```lua
-require("git_tools").browse() -- open current file, pinned to HEAD's commit
+require("git_tools").browse() -- cursor commit, current file permalink, or repo
 require("git_tools").browse({ copy = true, range = { 5, 12 } })
 require("git_tools").browse({ permalink = false }) -- current branch (detached: SHA)
 require("git_tools").browse({ commit = "HEAD~1" }) -- commit page
@@ -103,6 +103,28 @@ Paths/revisions are URL encoded and URL credentials are discarded. File links
 require tracked files; line ranges refer to remote committed content, so unsaved
 insertions can shift their meaning. `browse(opts, callback)` returns the URL via
 `callback(err,url)` instead of opening/copying it. No remote request is made by Git.
+
+## Branches and stash
+
+```lua
+require("git_tools").branches({ all = true }) -- locals and remote refs
+require("git_tools").stash() -- preview then Enter applies, retaining the stash
+-- Also :GitTools branches / :GitTools stash
+```
+
+The branch picker previews recent commits. Enter switches branches; selecting a
+remote branch creates a local tracking branch (an existing local name is never
+overwritten). `<C-a>` prompts to create a branch at HEAD, `<C-d>` confirms deleting
+a merged local branch, and `<F5>` refreshes. Creation does not switch. Current,
+worktree-checked-out, remote and unmerged branches cannot be deleted here. Branch
+tips are revalidated before mutations. `start` customizes the creation revision.
+
+Stash entries preview complete patches, including untracked files. Enter applies
+the selected immutable stash object, even if its `stash@{n}` position changed.
+The entry must still exist; apply never drops it. `index=true` also restores index
+state. Conflicts are reported and retained for `merge()` to resolve. `<F5>` reloads
+the list. Switching branches/applying stash refuses unsaved repository buffers;
+Git handles conflicts with existing disk changes without forcing a checkout.
 
 ## Lazygit floating terminal
 

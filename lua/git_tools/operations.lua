@@ -23,6 +23,17 @@ function M.modified(file)
   return buf ~= -1 and vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].modified
 end
 
+function M.unsaved(repo)
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buftype == "" and vim.bo[buf].modified then
+      local name = vim.api.nvim_buf_get_name(buf)
+      if name ~= "" and git.path(repo, name) then
+        return "Unsaved buffer: " .. name
+      end
+    end
+  end
+end
+
 function M.files(action, items, opts, callback)
   opts = opts or {}
   callback = callback or git.notify

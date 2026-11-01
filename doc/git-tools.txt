@@ -102,6 +102,20 @@ git_tools.merge(opts)                                *git-tools-merge*
     *_buffer variants. compare accepts from/to; log accepts a revision.
     Ex ranges select lines for blame/history/browse/hunk operations.
 
+git_tools.branches(opts)                             *git-tools-branches*
+    Local branch picker; all=true includes remote refs. Recent commit preview.
+    Enter switches (remote refs create a local tracking branch); C-a creates a
+    branch at HEAD without switching; C-d confirms deleting a merged local
+    branch. F5 refreshes. start customizes creation revision. Never force-delete
+    unmerged/current/worktree/remote branches. Revalidates selected branch tips.
+
+git_tools.stash(opts)                                *git-tools-stash*
+    Stash list and patch preview including untracked content. Enter applies
+    the selected SHA and retains the stash; index=true restores index too.
+    Stale/deleted selections fail; position changes preserve object identity.
+    F5 refreshes. Conflicted applies retain both result and stash. Branch switch
+    and stash apply reject unsaved repository buffers; Git protects disk edits.
+
 git_tools.lazygit(opts)                               *git-tools-lazygit*
     Open external LazyGit in a centered floating terminal. No Snacks required.
     Defaults: command="lazygit", args={}, width=0.9, height=0.9, border="rounded".

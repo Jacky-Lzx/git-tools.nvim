@@ -88,6 +88,38 @@ assert(vim.wait(5000, function()
 end, 5))
 assert(not vim.bo.modifiable and vim.bo.filetype == "diff")
 vim.cmd("tabclose")
+api.nvim_buf_delete(source, { force = true })
+local branches = require("git_tools").branches({
+  cwd = root,
+  input = function(cb)
+    cb("ui-created")
+  end,
+  confirm = function()
+    return true
+  end,
+})
+assert(vim.wait(5000, function()
+  return branches:current() ~= nil
+end, 5))
+branches.opts.actions.create(branches)
+branches:set_query("ui-created")
+assert(vim.wait(5000, function()
+  return branches:current() and branches:current().name == "ui-created"
+end, 5))
+branches.opts.actions.delete(branches)
+assert(vim.wait(5000, function()
+  return branches:current() == nil
+end, 5))
+branches:close()
+git("stash", "push", "-qm", "ui stash")
+local stash = require("git_tools").stash({ cwd = root })
+assert(vim.wait(5000, function()
+  return stash:current() ~= nil
+end, 5))
+stash:confirm()
+assert(vim.wait(5000, function()
+  return vim.fn.readfile(root .. "/sample.txt")[1] == "new"
+end, 5))
 vim.fn.delete(root, "rf")
 print("git workflows: real status picker, filtering, preview and file confirmation passed")
 vim.cmd("qa!")

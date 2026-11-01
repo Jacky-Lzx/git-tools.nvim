@@ -245,13 +245,18 @@ function M.open(opts)
   for _, name in ipairs({ "stage", "unstage", "restore" }) do
     actions[name] = function(picker)
       local items = vim.deepcopy(picker:selected({ fallback = true }))
+      if #items == 0 then
+        return
+      end
       controller:run(picker, function(done)
         M.apply(name, items, opts, done)
       end)
     end
   end
   actions.refresh = function(picker)
-    controller:refresh(picker)
+    if repo then
+      controller:refresh(picker)
+    end
   end
   actions.group = function(picker)
     if controller.busy then
