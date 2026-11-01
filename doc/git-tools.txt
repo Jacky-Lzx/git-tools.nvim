@@ -60,6 +60,23 @@ require("git_tools.integrations.status")              *git-tools-status-ui*
     User GitToolsUpdate data.buf identifies refreshed buffers; b:git_tools_status
     stores added/changed/removed/head. Snacks Git sign patterns need "GitTools".
 
+git_tools.compare(opts) / toggle_compare(opts)        *git-tools-compare*
+    File panel and native double-column diff in an owned tab. Default lists
+    staged (HEAD/index) and unstaged (index/buffer) changes. from/to select
+    revisions; commit selects its first-parent patch, including root commits.
+    staged=true filters index changes; path restricts files. diffthis(revision)
+    selects the current file. Return view:select(index), :refresh(), :close().
+    Panel: Enter selects, R refreshes; panes: <leader>gp returns to panel;
+    q closes. Working buffers and unsaved edits are retained on close.
+    Revision/index snapshots are read-only. History picker C-d opens a commit.
+
+git_tools.merge(opts)                                *git-tools-merge*
+    Conflicted files in three columns: ours, editable result, theirs. Result:
+    ]x/[x next/previous conflict; co/ct/cb choose ours/theirs/both; <leader>gb
+    opens base. S explicitly saves and stages, refusing remaining markers.
+    Choosing content alone never stages. Supports diff3 conflict markers.
+    Missing sides are empty; deleting a result remains an explicit Git action.
+
 diff.unified(before, after, opts)                      *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.
     Strings preserve final newlines. Lists contain terminated newline-free

@@ -1,6 +1,19 @@
 -- Requiring the plugin installs no mappings, commands, UI or Git processes.
 local M = { diff = require("git_tools.diff") }
 
+function M.compare(opts)
+  return require("git_tools.view").open(opts)
+end
+function M.toggle_compare(opts)
+  return require("git_tools.view").toggle(opts)
+end
+function M.diffthis(revision)
+  return M.compare({ path = vim.api.nvim_buf_get_name(0), from = revision, include_unchanged = true })
+end
+function M.merge(opts)
+  return M.compare(vim.tbl_extend("force", {}, opts or {}, { merge = true }))
+end
+
 function M.setup(opts)
   opts = opts or {}
   if opts.buffer ~= false then

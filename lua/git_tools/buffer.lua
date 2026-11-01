@@ -213,6 +213,10 @@ function M.refresh(buf, callback)
       git.run(task, repo.root, { "symbolic-ref", "--quiet", "--short", "HEAD" }, function(_, branch)
         if valid(s) then
           s.branch = branch:gsub("\n$", "")
+          if not s.attached and M.config.on_attach then
+            s.attached = true
+            M.config.on_attach(buf)
+          end
           M.draw(s)
           if callback then
             callback(nil, s)

@@ -122,6 +122,34 @@ local status = require("git_tools.integrations.status")
 status.scrollbar() -- register after nvim-scrollbar.setup(); gitsigns handler off
 ```
 
+## Multi-file diffs and merge conflicts
+
+```lua
+local git = require("git_tools")
+git.compare() -- file panel with staged (HEAD/index) and unstaged (index/buffer)
+git.compare({ from = "main", to = "HEAD" }) -- resolved revisions, read-only sides
+git.compare({ commit = "HEAD" }) -- compare commit to first parent; root supported
+git.diffthis() -- current file, index/buffer; git.diffthis("HEAD~1") for revision
+git.toggle_compare()
+git.merge() -- conflicted files only, ours / editable result / theirs
+```
+
+Each view owns a tab with a file panel and native Neovim diff windows. Panel
+`<CR>` selects a file, `R` reloads the list; `<leader>gp` returns from a diff pane
+to the panel, and `q` closes the view. Revision/index panes are read-only; working
+panes use existing buffers and preserve unsaved changes on close. Native `]c`,
+`[c`, diff folds and `do`/`dp` remain available subject to buffer writability.
+History pickers use `<C-d>` to open the selected commit in this view.
+
+In the merge result, `]x`/`[x` navigate conflicts; `co`/`ct`/`cb` choose ours,
+theirs or both for the current conflict, including diff3-style base markers.
+`<leader>gb` opens the base snapshot. These edits are undoable and do not stage.
+`S` explicitly saves and stages the result; remaining markers block that action.
+Result edits survive closing the view. Delete/modify cases expose absent sides
+as empty snapshots; deleting a result remains an explicit external Git action.
+All view mappings are released on close. Views are loaded on demand; `R` is the
+explicit file-panel refresh (buffer hunk tracking refreshes independently).
+
 ## Generate a patch
 
 ```lua

@@ -112,7 +112,19 @@ function M.open(opts)
       M.query(task, repo, opts, callback)
     end,
     ui.preview(M.patch, opts),
-    M.show
+    M.show,
+    {
+      actions = {
+        compare_commit = function(picker)
+          local item = picker:current()
+          if item then
+            picker:close()
+            require("git_tools").compare({ cwd = item.root, commit = item.sha })
+          end
+        end,
+      },
+      keys = { compare_commit = { "<C-d>" } },
+    }
   )
 end
 
