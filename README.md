@@ -321,6 +321,8 @@ The Git fixture suite covers repository paths/worktrees, history/blame/links,
 partial index operations, unsaved buffers, newline preservation, external index
 updates, native comparison tabs and real merge conflicts. `tests/tui.py` drives
 continuous keyboard input, overlay, Visual staging and operator-pending `dih`.
+With selection-tools installed, it also exercises picker filtering, file/hunk
+switching and disk staging while preserving unsaved buffer edits.
 Set `GIT_TOOLS_CONFIG=/path/to/nvim` to exercise its git-tools keymap spec too.
 When LazyGit is installed, this TUI check also opens its real interface using an
 isolated configuration directory and verifies resize, close/reopen and quit.

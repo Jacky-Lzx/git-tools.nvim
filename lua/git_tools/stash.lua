@@ -64,6 +64,11 @@ function M.apply(item, opts, callback)
       callback("Stash list changed; refresh and retry")
       return
     end
+    local unsaved = operations.unsaved(repo)
+    if unsaved then
+      callback(unsaved)
+      return
+    end
     local args = { "stash", "apply" }
     if opts.index then
       args[#args + 1] = "--index"

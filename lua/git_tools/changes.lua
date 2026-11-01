@@ -263,7 +263,9 @@ function M.open(opts)
       return
     end
     opts.group = not opts.group
-    controller:refresh(picker)
+    if repo then
+      controller:refresh(picker)
+    end
   end
   return ui.pick(
     opts,

@@ -69,6 +69,18 @@ assert(
   "F4 must switch to hunk results"
 )
 assert(p.query == "sample")
+p.opts.actions.group(p)
+assert(
+  vim.wait(5000, function()
+    local item = p:current()
+    return item and not item.hunk
+  end, 5),
+  "F4 must return to file results"
+)
+p.opts.actions.group(p)
+assert(vim.wait(5000, function()
+  return p:current() and p:current().hunk
+end, 5))
 local source = vim.fn.bufadd(root .. "/sample.txt")
 vim.fn.bufload(source)
 api.nvim_buf_set_lines(source, 0, 0, false, { "unsaved prefix" })
@@ -77,6 +89,15 @@ assert(vim.wait(1000, function()
   return vim.api.nvim_buf_get_name(0):match("sample.txt$") ~= nil
 end, 5))
 assert(api.nvim_win_get_cursor(0)[1] == 2, "Hunk jump must account for unsaved inserted lines")
+local automatic = require("git_tools").changes({ kind = "unstaged" })
+assert(vim.wait(5000, function()
+  return automatic:current() ~= nil
+end, 5))
+assert(
+  automatic:current().file:match("/sample.txt$"),
+  "Default repository must follow the source file rather than picker cwd"
+)
+automatic:close()
 local log = require("git_tools").log({ cwd = root })
 assert(vim.wait(5000, function()
   return log:current() ~= nil

@@ -71,6 +71,11 @@ function M.switch(item, opts, callback)
       callback(stale)
       return
     end
+    local unsaved = operations.unsaved({ root = item.root })
+    if unsaved then
+      callback(unsaved)
+      return
+    end
     local args
     if item.remote then
       local name = item.name:match("^[^/]+/(.+)$")

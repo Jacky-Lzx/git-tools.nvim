@@ -1,4 +1,8 @@
 vim.opt.rtp:prepend(assert(vim.env.GIT_TOOLS_ROOT))
+local selection = vim.env.SELECTION_TOOLS_DIR or vim.env.GIT_TOOLS_ROOT .. "/../selection-tools.nvim"
+if vim.fn.isdirectory(selection) == 1 then
+  vim.opt.rtp:append(selection)
+end
 vim.o.swapfile, vim.o.hidden = false, true
 vim.g.mapleader = " "
 local tools = require("git_tools")
@@ -43,5 +47,12 @@ _G.git_tools_snapshot = function()
       relative = vim.api.nvim_win_get_config(session.win).relative,
     }
   end
+  local picker = _G.git_tools_test_picker
+  if picker and not picker.closed then
+    local item = picker:current()
+    result.picker =
+      { query = picker.query, count = #picker.matches, kind = item and item.kind, hunk = item and item.hunk ~= nil }
+  end
   vim.fn.writefile({ vim.json.encode(result) }, assert(vim.env.GIT_TOOLS_TUI_STATE))
 end
+vim.keymap.set({ "n", "i" }, "<F12>", _G.git_tools_snapshot)

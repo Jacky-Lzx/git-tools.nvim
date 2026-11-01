@@ -39,6 +39,7 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
     lazygit_config = directory / "lazygit"
     lazygit_config.mkdir()
     env["GIT_TOOLS_TEST_LAZYGIT_CONFIG"] = str(lazygit_config)
+    env["SELECTION_TOOLS_DIR"] = os.environ.get("SELECTION_TOOLS_DIR", str(root.parent / "selection-tools.nvim"))
     process = subprocess.Popen([shutil.which("nvim"), "-n", "-i", "NONE", "-u", str(root / "tests/tui.lua"), str(fixture / "sample.txt")],
                                stdin=slave, stdout=slave, stderr=slave, env=env)
     transcript = bytearray()
@@ -60,7 +61,7 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
         deadline = time.monotonic() + 8
         while time.monotonic() < deadline:
             state.unlink(missing_ok=True)
-            send("\x1b:lua git_tools_snapshot()\r")
+            send("\x1b[24~")
             drain(0.12)
             if state.exists():
                 value = json.loads(state.read_text())
@@ -89,6 +90,20 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
         snapshot(lambda value: value["lines"][0] == "TWO", "Operator-pending dih failed")
         send("u")
         snapshot(lambda value: value["lines"][0] == "ONE", "Hunk deletion did not undo")
+        if (Path(env["SELECTION_TOOLS_DIR"]) / "lua/selection_tools/init.lua").exists():
+            send(":lua _G.git_tools_test_picker=require('git_tools').changes({kind='unstaged'})\r")
+            drain(0.2)
+            send("sample")
+            snapshot(lambda value: value.get("picker", {}).get("query") == "sample" and value["picker"].get("hunk"), "Hunk picker filter did not update")
+            send("\x1b[14~")  # F4: files
+            snapshot(lambda value: value.get("picker", {}).get("hunk") is False and value["picker"]["query"] == "sample", "Grouping lost the query")
+            send("\x1b[14~")
+            snapshot(lambda value: value.get("picker", {}).get("hunk"), "Hunk grouping did not return")
+            send("\x13")  # C-s: stage selected disk hunk
+            snapshot(lambda value: value.get("picker", {}).get("count") == 0, "Picker action did not refresh results")
+            assert git("show", ":sample.txt").startswith("one\ntwo\n"), "Picker must stage disk rather than unsaved text"
+            send("\x03")
+            snapshot(lambda value: not value.get("picker") and value["lines"][:2] == ["ONE", "TWO"], "Picker changed the unsaved source")
         if shutil.which("lazygit"):
             send("\x07")
             drain(0.7)

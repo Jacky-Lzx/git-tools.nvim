@@ -64,7 +64,13 @@ function M.preview(loader, opts)
 end
 
 function M.pick(opts, title, loader, preview, on_choice, extra)
-  opts = opts or {}
+  opts = vim.tbl_extend("force", {}, opts or {})
+  -- Capture the source before the picker makes its input buffer current.
+  if not opts.cwd then
+    local buf = opts.buf or 0
+    local name = vim.api.nvim_buf_get_name(buf)
+    opts.cwd = vim.bo[buf].buftype == "" and name ~= "" and vim.fs.dirname(name) or vim.fn.getcwd()
+  end
   local ok, selection = pcall(require, "selection_tools")
   if not ok then
     git.notify("Install selection-tools.nvim to use Git pickers")
