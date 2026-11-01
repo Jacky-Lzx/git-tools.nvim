@@ -64,6 +64,23 @@ another file; explicit `path` blames disk content. File history follows renames;
 line history uses Git's `-L` semantics and committed line numbers. History results
 are bounded by `limit` (default 200); increase it explicitly when needed.
 
+## Remote links
+
+```lua
+require("git_tools").browse() -- open current file, pinned to HEAD's commit
+require("git_tools").browse({ copy = true, range = { 5, 12 } })
+require("git_tools").browse({ permalink = false }) -- current branch (detached: SHA)
+require("git_tools").browse({ commit = "HEAD~1" }) -- commit page
+```
+
+Uses the branch's upstream remote, or `origin`; override with `remote`. Supports
+GitHub, GitLab, Bitbucket and Codeberg/Gitea, HTTP(S), SSH and scp-style remotes.
+Private hosts can specify `provider`, `base_url`, or `url(remote,rev,path,opts)`.
+Paths/revisions are URL encoded and URL credentials are discarded. File links
+require tracked files; line ranges refer to remote committed content, so unsaved
+insertions can shift their meaning. `browse(opts, callback)` returns the URL via
+`callback(err,url)` instead of opening/copying it. No remote request is made by Git.
+
 ## Generate a patch
 
 ```lua

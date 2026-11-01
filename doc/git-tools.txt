@@ -26,6 +26,14 @@ git_tools.blame(opts, callback)                       *git-tools-blame*
     with callback(err,items), return structured porcelain records. Zero-object
     entries have uncommitted=true. Return a cancellable task (:close()).
 
+git_tools.browse(opts, callback)                       *git-tools-browse*
+    Open current tracked file at HEAD's commit. copy=true copies its URL;
+    range={first,last} links lines. permalink=false uses current branch.
+    commit=true or a revision string opens a commit page. Optional cwd/path,
+    remote, provider, base_url, open(url), url(remote,rev,path,opts).
+    Known hosts: GitHub/GitLab/Bitbucket/Codeberg. Custom hosts need provider
+    or url. Optional callback(err,url) suppresses opening/copying.
+
 diff.unified(before, after, opts)                      *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.
     Strings preserve final newlines. Lists contain terminated newline-free
