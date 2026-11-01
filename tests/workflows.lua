@@ -47,6 +47,17 @@ p:confirm()
 assert(vim.wait(1000, function()
   return vim.api.nvim_buf_get_name(0):match("sample.txt$") ~= nil
 end, 5))
+local log = require("git_tools").log({ cwd = root })
+assert(vim.wait(5000, function()
+  return log:current() ~= nil
+end, 5))
+assert(log:current().subject == "initial")
+log:confirm()
+assert(vim.wait(5000, function()
+  return vim.api.nvim_buf_get_name(0):find("git-tools://", 1, true) ~= nil
+end, 5))
+assert(not vim.bo.modifiable and vim.bo.filetype == "diff")
+vim.cmd("tabclose")
 vim.fn.delete(root, "rf")
 print("git workflows: real status picker, filtering, preview and file confirmation passed")
 vim.cmd("qa!")

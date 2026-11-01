@@ -46,6 +46,24 @@ filenames are supported. Queries/previews are asynchronous, bounded by a timeout
 and cancelled on close or selection changes. `picker = { ... }` customizes the
 optional selection-tools UI. The picker dependency loads only when invoked.
 
+## History and blame
+
+```lua
+local git = require("git_tools")
+git.log({ limit = 200 })             -- repository log; optional rev = "main"
+git.file_history()                   -- follows renames of the current file
+git.line_history({ range = { 5, 12 } }) -- Git -L history; defaults to cursor line
+git.blame()                         -- current buffer line, including unsaved edits
+git.blame({ range = { 5, 12 } })
+```
+
+History and blame entries preview their complete commit patch. Confirm opens it
+in a read-only tab (`q` closes). Uncommitted blame entries display buffer text
+and do not pretend to identify a commit. `cwd` and absolute `path` can target
+another file; explicit `path` blames disk content. File history follows renames;
+line history uses Git's `-L` semantics and committed line numbers. History results
+are bounded by `limit` (default 200); increase it explicitly when needed.
+
 ## Generate a patch
 
 ```lua

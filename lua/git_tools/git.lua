@@ -82,6 +82,10 @@ end
 
 function M.path(repo, path)
   local absolute = vim.fn.fnamemodify(path or vim.api.nvim_buf_get_name(0), ":p")
+  local parent = vim.uv.fs_realpath(vim.fs.dirname(absolute))
+  if parent then
+    absolute = parent .. "/" .. vim.fs.basename(absolute)
+  end
   local prefix = repo.root .. "/"
   if absolute:sub(1, #prefix) ~= prefix then
     return nil, "File is outside the repository"

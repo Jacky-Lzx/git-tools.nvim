@@ -1,6 +1,20 @@
 local git = require("git_tools.git")
 local M = {}
 
+function M.scratch(lines, title, filetype)
+  vim.cmd("tabnew")
+  local buf = vim.api.nvim_get_current_buf()
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].swapfile = false
+  vim.api.nvim_buf_set_name(buf, "git-tools://" .. buf .. "/" .. title)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].filetype = filetype or "diff"
+  vim.bo[buf].modifiable = false
+  vim.keymap.set("n", "q", "<cmd>tabclose<cr>", { buffer = buf, silent = true })
+  return buf
+end
+
 function M.open_file(item)
   if vim.fn.filereadable(item.file) == 1 or vim.fn.bufnr(item.file) ~= -1 then
     vim.cmd.edit(vim.fn.fnameescape(item.file))

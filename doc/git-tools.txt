@@ -13,6 +13,19 @@ require("git_tools").status(opts)                     *git-tools-status*
     Patches represent disk/index/HEAD, not unsaved buffer changes. Selection
     opens the working file at its first hunk. Git processes cancel on close.
 
+git_tools.log(opts) / file_history(opts) / line_history(opts)
+                                                     *git-tools-history*
+    Commit pickers with complete commit-patch previews. limit=200, optional
+    cwd/rev/path. file_history follows renames; line_history uses Git -L and
+    opts.range={start,end} (committed line numbers; default current line).
+    Confirm opens a read-only tab; q closes it.
+
+git_tools.blame(opts, callback)                       *git-tools-blame*
+    Blame current line, or range={start,end}. Includes unsaved buffer text.
+    Explicit absolute path blames disk. Without callback, open a commit picker;
+    with callback(err,items), return structured porcelain records. Zero-object
+    entries have uncommitted=true. Return a cancellable task (:close()).
+
 diff.unified(before, after, opts)                      *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.
     Strings preserve final newlines. Lists contain terminated newline-free
