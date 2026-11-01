@@ -19,6 +19,7 @@ function M.open_file(item)
   if vim.fn.filereadable(item.file) == 1 or vim.fn.bufnr(item.file) ~= -1 then
     vim.cmd.edit(vim.fn.fnameescape(item.file))
     vim.api.nvim_win_set_cursor(0, { math.min(item.lnum or 1, vim.api.nvim_buf_line_count(0)), 0 })
+    return vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
   else
     git.notify("File is absent from the working tree: " .. item.path)
   end

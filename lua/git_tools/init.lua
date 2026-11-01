@@ -30,6 +30,7 @@ function M.setup(opts)
     local name = command.fargs[1] or "status"
     local actions = {
       status = M.status,
+      changes = M.changes,
       log = M.log,
       file_history = M.file_history,
       line_history = M.line_history,
@@ -66,6 +67,7 @@ function M.setup(opts)
     complete = function()
       return {
         "status",
+        "changes",
         "log",
         "file_history",
         "line_history",
@@ -135,6 +137,9 @@ end
 
 function M.log(opts)
   return require("git_tools.history").open(opts)
+end
+function M.changes(opts)
+  return require("git_tools.changes").open(opts)
 end
 function M.file_history(opts)
   return M.log(vim.tbl_extend("force", {}, opts or {}, { file = true }))

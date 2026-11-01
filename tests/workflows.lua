@@ -60,10 +60,23 @@ assert(
   "Unstage must refresh the same picker"
 )
 assert(p.query == "sample", "Actions must preserve the filter")
+p.opts.actions.group(p)
+assert(
+  vim.wait(5000, function()
+    local item = p:current()
+    return item and item.hunk ~= nil
+  end, 5),
+  "F4 must switch to hunk results"
+)
+assert(p.query == "sample")
+local source = vim.fn.bufadd(root .. "/sample.txt")
+vim.fn.bufload(source)
+api.nvim_buf_set_lines(source, 0, 0, false, { "unsaved prefix" })
 p:confirm()
 assert(vim.wait(1000, function()
   return vim.api.nvim_buf_get_name(0):match("sample.txt$") ~= nil
 end, 5))
+assert(api.nvim_win_get_cursor(0)[1] == 2, "Hunk jump must account for unsaved inserted lines")
 local log = require("git_tools").log({ cwd = root })
 assert(vim.wait(5000, function()
   return log:current() ~= nil

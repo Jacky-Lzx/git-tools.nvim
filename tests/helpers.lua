@@ -35,6 +35,11 @@ function M.fixture()
   function f:write(path, lines)
     vim.fn.writefile(lines, self.root .. "/" .. path)
   end
+  function f:bytes(path, text)
+    local fd = assert(vim.uv.fs_open(self.root .. "/" .. path, "w", 420))
+    assert(vim.uv.fs_write(fd, text))
+    assert(vim.uv.fs_close(fd))
+  end
   function f:cleanup()
     vim.fn.delete(self.root, "rf")
   end

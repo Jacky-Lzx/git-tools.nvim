@@ -53,6 +53,14 @@ selections, conflicts, stale index/file snapshots and discarding an unsaved
 buffer are rejected. Untracked files are never deleted by Discard. These file
 actions use disk content; the buffer hunk APIs below use unsaved buffer text.
 
+`require("git_tools").changes()` (or `:GitTools changes`) starts with individual
+repository hunks. `<F4>` switches between file and hunk results without losing
+the query. The same action keys apply to selected hunks; a multi-hunk selection
+is submitted as one ordered Git patch. Confirm jumps to the first changed line,
+mapping disk/index coordinates through any unsaved buffer changes. Binary and
+metadata-only results use whole-file operations; select those separately from
+text hunks. Conflict files use the merge view. `kind` filters either view.
+
 ## History and blame
 
 ```lua

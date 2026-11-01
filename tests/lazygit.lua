@@ -45,7 +45,7 @@ assert(
 )
 vim.fn.chansend(session.job, "size\n")
 wait(function()
-  return vim.fn.filereadable(record .. ".size") == 1
+  return vim.fn.filereadable(record .. ".size") == 1 and #vim.fn.readfile(record .. ".size") > 0
 end)
 local rows, cols = vim.fn.readfile(record .. ".size")[1]:match("(%d+)%s+(%d+)")
 assert(

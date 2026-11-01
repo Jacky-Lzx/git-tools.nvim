@@ -17,6 +17,14 @@ require("git_tools").status(opts)                     *git-tools-status*
     Rejects incompatible selections, conflicts, stale snapshots and discarding
     unsaved buffers. Discard never deletes untracked files.
 
+git_tools.changes(opts)                               *git-tools-changes*
+    Search individual repository hunks. F4 switches files/hunks in the same
+    picker; query retained. C-s stage, C-z unstage, C-r discard, F5 refresh.
+    Multi-hunk changes use one ordered patch. Binary/metadata-only entries
+    support whole-file actions and must be selected separately from text hunks.
+    Confirm jumps to the first changed line, accounting for unsaved buffer text.
+    opts.group=true starts with files; kind filters staged/unstaged/untracked.
+
 git_tools.log(opts) / file_history(opts) / line_history(opts)
                                                      *git-tools-history*
     Commit pickers with complete commit-patch previews. limit=200, optional
