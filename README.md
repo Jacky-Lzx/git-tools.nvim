@@ -81,6 +81,47 @@ require tracked files; line ranges refer to remote committed content, so unsaved
 insertions can shift their meaning. `browse(opts, callback)` returns the URL via
 `callback(err,url)` instead of opening/copying it. No remote request is made by Git.
 
+## Buffer hunks and overlay
+
+```lua
+local git = require("git_tools")
+git.setup({ buffer = { signs = false, numhl = true, word_diff = false } })
+git.nav_hunk("next") -- prev, first, last
+git.select_hunk() -- synchronous visual/operator mapping; buffer must be ready
+git.preview_hunk()
+git.toggle_overlay()
+git.stage_hunk({ range = { 5, 8 } }) -- optional; default hunk under cursor
+git.unstage_hunk()
+git.reset_hunk()
+git.stage_buffer() -- also unstage_buffer(), reset_buffer()
+git.quickfix() -- current buffer; { all = true } for repository disk/index hunks
+git.toggle("word_diff") -- also signs, numhl, line_blame
+```
+
+`setup()` opts into buffer tracking; requiring the module alone still has no
+side effects. Diffs compare index with unsaved buffer text. Stage writes selected
+buffer changes to the index without saving disk; unstage restores selected index
+changes from HEAD. Reset changes only buffer text and is undoable. Visual ranges
+project only selected replacement/addition lines; excess old lines in an unequal
+replacement belong to its final new line. Entire-file methods cover every hunk.
+Index patches retain file modes and final-newline semantics, use context checks,
+and recheck the index/buffer snapshot before applying. CRLF index lines retain
+CRLF. Binary, symlink and unmerged entries are excluded from text hunk operations.
+Only regular file content is staged; attributes/clean filters are not executed.
+Each mutation accepts `callback(err)`. Repeated index mutations are rejected.
+
+Index watchers (plus a 500ms inode poll for coalesced filesystem events) and
+buffer/focus events refresh attached buffers. Debounce defaults to 100ms.
+`GitToolsUpdate` User events carry `data.buf`; `vim.b.git_tools_status` contains
+added/changed/removed/head. `GitToolsAdd/Change/Delete` highlight groups support
+statuscolumn patterns; add `"GitTools"` to Snacks' Git patterns. Optional adapters:
+
+```lua
+local status = require("git_tools.integrations.status")
+-- lualine: { "diff", source = status.diff }, branch component: status.branch
+status.scrollbar() -- register after nvim-scrollbar.setup(); gitsigns handler off
+```
+
 ## Generate a patch
 
 ```lua

@@ -34,6 +34,32 @@ git_tools.browse(opts, callback)                       *git-tools-browse*
     Known hosts: GitHub/GitLab/Bitbucket/Codeberg. Custom hosts need provider
     or url. Optional callback(err,url) suppresses opening/copying.
 
+git_tools.setup({buffer={...}})                       *git-tools-buffer*
+    Opt into automatic buffer tracking. Defaults: signs=false, numhl=true,
+    word_diff=false, line_blame=false, debounce=100 (ms). buffer=false disables
+    initial setup. No global mappings are installed.
+    nav_hunk("next"|"prev"|"first"|"last"), select_hunk(), preview_hunk(),
+    toggle_overlay(buf), get_hunks(buf), toggle(name,optional_boolean).
+
+git_tools.stage_hunk(opts) / unstage_hunk(opts) / reset_hunk(opts)
+                                                     *git-tools-hunks*
+    Default current hunk; range={first,last} selects buffer lines. Stage uses
+    unsaved buffer text; unstage projects HEAD/index hunks back through buffer
+    changes. Reset only edits the buffer and supports normal undo. *_buffer()
+    methods act on all hunks. Optional buf and callback(err).
+    Unequal replacements assign excess deleted lines to the final new line.
+    CRLF/index modes/newline flags are preserved. Binary/symlink/unmerged files
+    are excluded. Clean filters are not run. Index/buffer changes are checked
+    before applying a context-checked cached patch; concurrent operations fail.
+    quickfix() exports current buffer hunks; quickfix({all=true}) exports disk
+    and index hunks across the repository.
+
+require("git_tools.integrations.status")              *git-tools-status-ui*
+    diff(): lualine source {added,modified,removed}. branch(): branch name.
+    scrollbar(): register nvim-scrollbar handler after that plugin's setup.
+    User GitToolsUpdate data.buf identifies refreshed buffers; b:git_tools_status
+    stores added/changed/removed/head. Snacks Git sign patterns need "GitTools".
+
 diff.unified(before, after, opts)                      *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.
     Strings preserve final newlines. Lists contain terminated newline-free

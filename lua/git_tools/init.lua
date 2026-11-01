@@ -1,6 +1,53 @@
 -- Requiring the plugin installs no mappings, commands, UI or Git processes.
 local M = { diff = require("git_tools.diff") }
 
+function M.setup(opts)
+  opts = opts or {}
+  if opts.buffer ~= false then
+    require("git_tools.buffer").setup(opts.buffer)
+  end
+end
+
+function M.stage_hunk(opts)
+  return require("git_tools.actions").change("stage", opts)
+end
+function M.unstage_hunk(opts)
+  return require("git_tools.actions").change("unstage", opts)
+end
+function M.reset_hunk(opts)
+  return require("git_tools.actions").change("reset", opts)
+end
+function M.stage_buffer(opts)
+  return M.stage_hunk(vim.tbl_extend("force", {}, opts or {}, { all = true }))
+end
+function M.unstage_buffer(opts)
+  return M.unstage_hunk(vim.tbl_extend("force", {}, opts or {}, { all = true }))
+end
+function M.reset_buffer(opts)
+  return M.reset_hunk(vim.tbl_extend("force", {}, opts or {}, { all = true }))
+end
+function M.nav_hunk(direction, opts)
+  return require("git_tools.actions").nav(direction, opts)
+end
+function M.select_hunk()
+  return require("git_tools.actions").select()
+end
+function M.preview_hunk(opts)
+  return require("git_tools.actions").preview(opts)
+end
+function M.toggle_overlay(buf)
+  return require("git_tools.buffer").toggle_overlay(buf)
+end
+function M.toggle(name, value)
+  return require("git_tools.buffer").toggle(name, value)
+end
+function M.get_hunks(buf)
+  return require("git_tools.buffer").get_hunks(buf)
+end
+function M.quickfix(opts)
+  return require("git_tools.actions").quickfix(opts)
+end
+
 function M.browse(opts, callback)
   return require("git_tools.browse").open(opts, callback)
 end
