@@ -45,6 +45,12 @@ git_tools.browse(opts, callback)                       *git-tools-browse*
     remote, provider, base_url, open(url), url(remote,rev,path,opts).
     Known hosts: GitHub/GitLab/Bitbucket/Codeberg. Custom hosts need provider
     or url. Optional callback(err,url) suppresses opening/copying.
+    what=repo/branch/file/commit/permalink explicitly selects a target. Default
+    auto recognizes a valid cursor commit hash, then file or repository home.
+    A range takes precedence over hash recognition. branch selects a branch
+    explicitly; branch pages without a branch fail on detached HEAD.
+    Multiple remotes open a chooser (upstream/origin first). remote bypasses
+    it; select_remote=false chooses the preferred remote. Cancel returns nil.
 
 git_tools.setup({buffer={...}})                       *git-tools-buffer*
     Opt into automatic buffer tracking. Defaults: signs=false, numhl=true,

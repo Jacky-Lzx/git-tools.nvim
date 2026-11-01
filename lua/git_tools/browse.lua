@@ -37,17 +37,24 @@ function M.url(remote, revision, path, opts)
   if opts.url then
     return opts.url(remote, revision, path, opts)
   end
+  local base = (opts.base_url or ("https://" .. remote.host .. "/" .. encode(remote.path, true))):gsub("/$", "")
+  if opts.what == "repo" then
+    return base
+  end
   if not provider then
     return nil, "Unknown Git host; set provider or a custom url function"
   end
-  local base = (opts.base_url or ("https://" .. remote.host .. "/" .. encode(remote.path, true))):gsub("/$", "")
   local commit_routes = { github = "/commit/", gitlab = "/-/commit/", bitbucket = "/commits/", gitea = "/commit/" }
   local file_routes = { github = "/blob/", gitlab = "/-/blob/", bitbucket = "/src/", gitea = "/src/commit/" }
   if not file_routes[provider] then
     return nil, "Unsupported provider: " .. tostring(provider)
   end
-  if opts.commit then
+  if opts.what == "commit" or (not opts.what and opts.commit) then
     return base .. commit_routes[provider] .. encode(revision)
+  end
+  if opts.what == "branch" then
+    local routes = { github = "/tree/", gitlab = "/-/tree/", bitbucket = "/src/", gitea = "/src/branch/" }
+    return base .. routes[provider] .. encode(revision)
   end
   local route = file_routes[provider]
   if provider == "gitea" and opts.permalink == false then
@@ -71,8 +78,17 @@ end
 function M.open(opts, callback)
   opts = vim.tbl_extend("force", {}, opts or {})
   local path = opts.path or vim.api.nvim_buf_get_name(0)
+  local word = opts.word
+  if not word then
+    local ok, value = pcall(vim.fn.expand, "<cword>")
+    word = ok and value or ""
+  end
+  local has_file = opts.path ~= nil or (vim.bo.buftype == "" and path ~= "")
   local task = git.task()
   local function finish(err, url)
+    if task.cancelled then
+      return
+    end
     if callback then
       callback(err, url)
       return
@@ -81,12 +97,15 @@ function M.open(opts, callback)
       git.notify(err)
       return
     end
+    if not url then
+      return
+    end
     if opts.copy then
       vim.fn.setreg("+", url)
       vim.notify("Copied " .. url, vim.log.levels.INFO, { title = "Git tools" })
     else
-      local opened, result, failure = pcall(opts.open or vim.ui.open, url)
-      if not opened then
+      local ok, result, failure = pcall(opts.open or vim.ui.open, url)
+      if not ok then
         git.notify(result)
       elseif not result and failure then
         git.notify(failure)
@@ -98,16 +117,21 @@ function M.open(opts, callback)
       finish(err)
       return
     end
-    local relative, path_err
-    if not opts.commit then
-      relative, path_err = git.path(repo, path)
-    end
-    if path_err then
-      finish(path_err)
+    local what = opts.what or (opts.commit and "commit") or "auto"
+    if not vim.tbl_contains({ "auto", "repo", "branch", "file", "commit", "permalink" }, what) then
+      finish("Unknown browse target: " .. tostring(what))
       return
     end
-    local function with_revision(revision)
+    local current_branch
+    local function publish(revision, relative)
       local function remote_url(name)
+        if task.cancelled then
+          return
+        end
+        if not name then
+          finish()
+          return
+        end
         git.run(task, repo.root, { "remote", "get-url", "--", name }, function(remote_err, output)
           if remote_err then
             finish(remote_err)
@@ -126,28 +150,82 @@ function M.open(opts, callback)
         remote_url(opts.remote)
         return
       end
-      git.run(task, repo.root, { "config", "--get", "branch." .. (opts.branch or "") .. ".remote" }, function(_, remote)
-        remote = remote:gsub("\n$", "")
-        remote_url(remote ~= "" and remote ~= "." and remote or "origin")
+      git.run(task, repo.root, { "remote" }, function(list_err, output)
+        if list_err then
+          finish(list_err)
+          return
+        end
+        local names = git.lines(output)
+        if #names == 0 then
+          finish("Repository has no remotes")
+          return
+        end
+        git.run(
+          task,
+          repo.root,
+          { "config", "--get", "branch." .. (current_branch or "") .. ".remote" },
+          function(_, upstream)
+            upstream = upstream:gsub("\n$", "")
+            local preferred = vim.tbl_contains(names, upstream) and upstream
+              or vim.tbl_contains(names, "origin") and "origin"
+              or names[1]
+            table.sort(names, function(a, b)
+              if a == preferred then
+                return b ~= preferred
+              end
+              if b == preferred then
+                return false
+              end
+              return a < b
+            end)
+            if #names == 1 or opts.select_remote == false then
+              remote_url(preferred)
+            elseif type(opts.select_remote) == "function" then
+              opts.select_remote(names, remote_url)
+            else
+              vim.ui.select(names, { prompt = "Git remote" }, remote_url)
+            end
+          end
+        )
       end)
     end
-    local function resolve()
-      require("git_tools.history").resolve(
-        task,
-        repo,
-        type(opts.commit) == "string" and opts.commit or "HEAD",
-        function(rev_err, sha)
+    local function resolve(revision, done)
+      require("git_tools.history").resolve(task, repo, revision, done)
+    end
+    local function target()
+      opts.what = what
+      if what == "repo" then
+        publish(nil)
+        return
+      end
+      if what == "branch" then
+        local branch = opts.branch or current_branch
+        if not branch or branch == "" then
+          finish("Detached HEAD: specify branch for a branch URL")
+          return
+        end
+        resolve(branch, function(branch_err)
+          if branch_err then
+            finish(branch_err)
+          else
+            publish(branch)
+          end
+        end)
+        return
+      end
+      if what == "commit" then
+        resolve(type(opts.commit) == "string" and opts.commit or "HEAD", function(rev_err, sha)
           if rev_err then
             finish(rev_err)
           else
-            with_revision(sha)
+            publish(sha)
           end
-        end
-      )
-    end
-    local function tracked()
-      if opts.commit then
-        resolve()
+        end)
+        return
+      end
+      local relative, path_err = git.path(repo, path)
+      if path_err then
+        finish(path_err)
         return
       end
       git.run(task, repo.root, { "ls-files", "--error-unmatch", "--", relative }, function(track_err)
@@ -155,24 +233,48 @@ function M.open(opts, callback)
           finish("File is not tracked by Git: " .. relative)
           return
         end
-        if opts.permalink == false then
-          git.run(task, repo.root, { "symbolic-ref", "--quiet", "--short", "HEAD" }, function(branch_err, branch)
-            if branch_err then
-              resolve()
+        if what == "permalink" then
+          opts.permalink = true
+        end
+        if opts.permalink == false and (opts.branch or current_branch) then
+          publish(opts.branch or current_branch, relative)
+        else
+          resolve("HEAD", function(rev_err, sha)
+            if rev_err then
+              finish(rev_err)
             else
-              opts.branch = branch:gsub("\n$", "")
-              with_revision(opts.branch)
+              publish(sha, relative)
             end
           end)
-        else
-          resolve()
         end
       end)
     end
-    -- Use the current branch's upstream remote even for fixed-commit links.
     git.run(task, repo.root, { "symbolic-ref", "--quiet", "--short", "HEAD" }, function(_, branch)
-      opts.branch = branch:gsub("\n$", "")
-      tracked()
+      current_branch = branch:gsub("\n$", "")
+      if current_branch == "" then
+        current_branch = nil
+      end
+      if what ~= "auto" then
+        target()
+        return
+      end
+      local function fallback()
+        what = has_file and "file" or "repo"
+        target()
+      end
+      if not opts.range and word:match("^%x+$") and #word >= 7 and #word <= 64 then
+        resolve(word, function(hash_err, sha)
+          if hash_err then
+            fallback()
+          else
+            what = "commit"
+            opts.commit = sha
+            target()
+          end
+        end)
+      else
+        fallback()
+      end
     end)
   end)
   return task

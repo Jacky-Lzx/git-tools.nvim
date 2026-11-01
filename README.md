@@ -86,9 +86,17 @@ require("git_tools").browse() -- open current file, pinned to HEAD's commit
 require("git_tools").browse({ copy = true, range = { 5, 12 } })
 require("git_tools").browse({ permalink = false }) -- current branch (detached: SHA)
 require("git_tools").browse({ commit = "HEAD~1" }) -- commit page
+require("git_tools").browse({ what = "repo" }) -- repository home
+require("git_tools").browse({ what = "branch" }) -- current or explicit branch
 ```
 
-Uses the branch's upstream remote, or `origin`; override with `remote`. Supports
+The default auto target recognizes a valid commit hash under the cursor,
+otherwise links the current file (or repository home without a file). A line
+range always selects a file link. Explicit `what` accepts `repo`, `branch`,
+`file`, `commit` or `permalink`; file/permalink targets avoid hash detection.
+With multiple remotes, a chooser lists the upstream/origin first; `remote`
+selects directly, and `select_remote=false` uses the preferred remote directly.
+Supports
 GitHub, GitLab, Bitbucket and Codeberg/Gitea, HTTP(S), SSH and scp-style remotes.
 Private hosts can specify `provider`, `base_url`, or `url(remote,rev,path,opts)`.
 Paths/revisions are URL encoded and URL credentials are discarded. File links
