@@ -13,8 +13,13 @@ end
 
 local function contents(buf)
   local lines = api.nvim_buf_get_lines(buf, 0, -1, false)
-  if #lines == 1 and lines[1] == "" and not vim.bo[buf].endofline then
-    lines = {}
+  if #lines == 1 and lines[1] == "" then
+    local empty = api.nvim_buf_call(buf, function()
+      return vim.fn.wordcount().bytes == 0
+    end)
+    if empty then
+      return h.text("")
+    end
   end
   return h.text(h.serialize(lines, vim.bo[buf].endofline, false))
 end
@@ -122,12 +127,14 @@ function M.read(task, repo, path, callback)
             callback("Binary file; hunk operations are unavailable")
             return
           end
+          local stat = not mode and uv.fs_stat(repo.root .. "/" .. path) or nil
+          local new_mode = stat and bit.band(stat.mode, 73) ~= 0 and "100755" or "100644"
           callback(nil, {
             index = h.text(index),
             head = h.text(head_text),
             exists = sha ~= nil,
             head_exists = head_sha ~= nil,
-            mode = mode or "100644",
+            mode = mode or new_mode,
           })
         end
         if head_sha then
@@ -197,6 +204,11 @@ function M.refresh(buf, callback)
       end
       if read_err then
         s.error = read_err
+        s.hunks, s.staged = {}, {}
+        for _, namespace in ipairs({ ns, overlay_ns, blame_ns }) do
+          api.nvim_buf_clear_namespace(buf, namespace, 0, -1)
+        end
+        vim.b[buf].git_tools_status = nil
         if callback then
           callback(read_err)
         end
@@ -306,6 +318,9 @@ function M.attach(buf)
   M.states[buf] = s
   api.nvim_buf_attach(buf, false, {
     on_lines = function()
+      if M.states[buf] ~= s then
+        return true
+      end
       M.schedule(buf)
     end,
     on_detach = function()

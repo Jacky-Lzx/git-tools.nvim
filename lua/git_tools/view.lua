@@ -98,6 +98,9 @@ function View:cleanup()
   end
   self.closed = true
   self.task:close()
+  if self.list_task then
+    self.list_task:close()
+  end
   if self.selection_task then
     self.selection_task:close()
   end
@@ -235,6 +238,9 @@ function View:select(index)
       if task.cancelled or not self:alive() then
         return
       end
+      if api.nvim_get_current_tabpage() ~= (self.tab or self.origin_tab) then
+        return
+      end
       self:layout(merge)
       local left = scratch(old, merge and "ours" or tostring(before), item.path)
       local right
@@ -346,15 +352,41 @@ function View:refresh()
   if not self:alive() then
     return
   end
+  if self.list_task then
+    self.list_task:close()
+  end
+  if self.selection_task then
+    self.selection_task:close()
+  end
+  local task = git.task()
+  self.list_task = task
   local function loaded(err, items)
     if err then
       git.notify(err)
       return
     end
-    if not self:alive() then
+    if task.cancelled or not self:alive() then
       return
     end
     self.items = items
+    if not self.to and not self.opts.staged and not self.opts.merge then
+      local seen = {}
+      for _, item in ipairs(items) do
+        if item.kind ~= "staged" then
+          seen[item.path] = true
+        end
+      end
+      for _, buf in ipairs(api.nvim_list_bufs()) do
+        if api.nvim_buf_is_loaded(buf) and vim.bo[buf].buftype == "" and vim.bo[buf].modified then
+          local name = api.nvim_buf_get_name(buf)
+          local path = name ~= "" and git.path(self.repo, name) or nil
+          if path and not seen[path] then
+            self.items[#self.items + 1] = { kind = "unstaged", path = path, file = name, text = "buffer    B " .. path }
+            seen[path] = true
+          end
+        end
+      end
+    end
     if self.opts.include_unchanged and self.opts.path and #items == 0 then
       self.items = {
         {
@@ -377,7 +409,7 @@ function View:refresh()
     end
   end
   if not self.opts.from and not self.opts.commit then
-    repository.status(self.task, self.repo, function(err, items)
+    repository.status(task, self.repo, function(err, items)
       if err then
         loaded(err)
         return
@@ -409,13 +441,16 @@ function View:refresh()
   if self.opts.path then
     args[#args + 1] = self.opts.path
   end
-  git.run(self.task, self.repo.root, args, function(err, output)
+  git.run(task, self.repo.root, args, function(err, output)
     loaded(err, not err and M.parse_names(output, self.repo.root) or nil)
   end)
 end
 function M.open(opts)
   opts = vim.tbl_extend("force", {}, opts or {})
-  local view = setmetatable({ opts = opts, task = git.task(), maps = {}, items = {} }, View)
+  local view = setmetatable(
+    { opts = opts, task = git.task(), maps = {}, items = {}, origin_tab = api.nvim_get_current_tabpage() },
+    View
+  )
   M.active[view] = true
   git.discover(view.task, opts, function(err, repo)
     if err then

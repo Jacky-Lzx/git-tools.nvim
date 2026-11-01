@@ -26,6 +26,7 @@ end
 git("init", "-q")
 git("config", "user.name", "Fixture")
 git("config", "user.email", "fixture@example.invalid")
+git("config", "core.autocrlf", "false")
 local path = root .. "/space \t\n中.txt"
 vim.fn.writefile({ "one", "two", "three", "four", "five" }, path)
 git("add", ".")
@@ -109,6 +110,30 @@ assert(
   end, 5),
   "Overlay must refresh after typing"
 )
+local lazy = vim.fn.stdpath("data") .. "/lazy/"
+local status = require("git_tools.integrations.status")
+if vim.fn.isdirectory(lazy .. "lualine.nvim") == 1 then
+  vim.opt.rtp:append(lazy .. "lualine.nvim")
+  require("lualine").setup({
+    options = { theme = "auto", icons_enabled = false },
+    sections = {
+      lualine_a = { status.branch },
+      lualine_b = { { "diff", source = status.diff, symbols = { added = "+", modified = "~", removed = "-" } } },
+    },
+  })
+  vim.g.actual_curwin = api.nvim_get_current_win()
+  require("lualine").refresh({ force = true })
+  local rendered = require("lualine").statusline()
+  assert(rendered:find("~1", 1, true), "Actual lualine must render the GitTools source: " .. rendered)
+end
+if vim.fn.isdirectory(lazy .. "nvim-scrollbar") == 1 then
+  vim.opt.rtp:append(lazy .. "nvim-scrollbar")
+  require("scrollbar").setup({ handlers = { gitsigns = false }, handle = { hide_if_all_visible = false } })
+  assert(status.scrollbar() and status.scrollbar())
+  require("scrollbar.handlers").show()
+  local marks = require("scrollbar.utils").get_scrollbar_marks(buf).git_tools
+  assert(#marks == 1 and marks[1].type == "GitChange", "Actual scrollbar must receive GitTools hunk marks")
+end
 vim.fn.writefile({ "external" }, path)
 git("add", "--", vim.fs.basename(path))
 assert(
@@ -127,6 +152,26 @@ action("stage_buffer")
 assert(git("show", ":new.txt") == "new unsaved\n")
 action("unstage_buffer")
 assert(git("ls-files", "--", "new.txt") == "")
+buffer.detach(buf)
+vim.cmd.enew({ bang = true })
+vim.fn.writefile({ "a\r", "b\r" }, root .. "/crlf.txt")
+git("add", "crlf.txt")
+git("update-index", "--chmod=+x", "--", "crlf.txt")
+vim.cmd.edit(root .. "/crlf.txt")
+buf = api.nvim_get_current_buf()
+assert(vim.bo[buf].fileformat == "dos" and #ready().hunks == 0)
+api.nvim_buf_set_lines(buf, 0, 1, false, { "changed" })
+action("stage_buffer")
+assert(git("show", ":crlf.txt") == "changed\r\nb\r\n", "CRLF index bytes must be retained")
+assert(git("ls-files", "--stage", "--", "crlf.txt"):match("^100755"), "Staging must retain executable mode")
+buffer.detach(buf)
+vim.cmd.enew({ bang = true })
+vim.cmd.edit(root .. "/empty.txt")
+buf = api.nvim_get_current_buf()
+action("stage_buffer")
+assert(git("show", ":empty.txt") == "", "An empty buffer must stage zero bytes")
+action("unstage_buffer")
+assert(git("ls-files", "--", "empty.txt") == "", "An empty added file must unstage")
 buffer.detach(buf)
 vim.fn.delete(root, "rf")
 print("git hunks: partial stage/unstage/reset, unsaved buffers, newlines, overlay and external index refresh passed")

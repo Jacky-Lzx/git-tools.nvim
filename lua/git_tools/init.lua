@@ -19,6 +19,61 @@ function M.setup(opts)
   if opts.buffer ~= false then
     require("git_tools.buffer").setup(opts.buffer)
   end
+  vim.api.nvim_create_user_command("GitTools", function(command)
+    local name = command.fargs[1] or "status"
+    local actions = {
+      status = M.status,
+      log = M.log,
+      file_history = M.file_history,
+      line_history = M.line_history,
+      blame = M.blame,
+      browse = M.browse,
+      compare = M.compare,
+      merge = M.merge,
+      stage = M.stage_hunk,
+      unstage = M.unstage_hunk,
+      reset = M.reset_hunk,
+      stage_buffer = M.stage_buffer,
+      unstage_buffer = M.unstage_buffer,
+      reset_buffer = M.reset_buffer,
+    }
+    if not actions[name] then
+      error("Unknown GitTools action: " .. name)
+    end
+    local args = {}
+    if name == "compare" then
+      args.from, args.to = command.fargs[2], command.fargs[3]
+    end
+    if name == "log" then
+      args.rev = command.fargs[2]
+    end
+    if command.range > 0 then
+      args.range = { command.line1, command.line2 }
+    end
+    actions[name](args)
+  end, {
+    nargs = "*",
+    range = true,
+    force = true,
+    complete = function()
+      return {
+        "status",
+        "log",
+        "file_history",
+        "line_history",
+        "blame",
+        "browse",
+        "compare",
+        "merge",
+        "stage",
+        "unstage",
+        "reset",
+        "stage_buffer",
+        "unstage_buffer",
+        "reset_buffer",
+      }
+    end,
+  })
 end
 
 function M.stage_hunk(opts)

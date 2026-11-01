@@ -89,6 +89,7 @@ function M.patch(task, item, callback, opts)
       local lnum = line:match("^@@ .- %+(%d+)")
       if lnum then
         item.lnum = math.max(1, tonumber(lnum))
+        item.pos = { item.lnum, 0 }
         break
       end
     end

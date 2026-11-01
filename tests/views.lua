@@ -68,6 +68,19 @@ assert(
 view:close()
 api.nvim_buf_delete(actual, { force = true })
 git("reset", "--hard", initial)
+vim.cmd.edit(root .. "/b.txt")
+local unsaved = api.nvim_get_current_buf()
+api.nvim_buf_set_lines(unsaved, 0, -1, false, { "buffer only" })
+view = tools.compare({ cwd = root })
+wait(function()
+  return view.current ~= nil
+end)
+assert(
+  view.current.path == "b.txt" and text(view.windows[2]) == "buffer only",
+  "File panel must include buffer-only changes"
+)
+view:close()
+api.nvim_buf_delete(unsaved, { force = true })
 git("checkout", "-qb", "side")
 vim.fn.writefile({ "theirs" }, root .. "/a.txt")
 git("add", "a.txt")

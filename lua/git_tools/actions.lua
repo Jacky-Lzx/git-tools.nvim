@@ -85,7 +85,9 @@ function M.change(action, opts)
       reverse = true
     end
     local desired, count = h.project(before, after, changes, selected, reverse)
-    if count == 0 and not (opts.all and action == "stage" and not s.exists) then
+    local mode_only = opts.all
+      and ((action == "stage" and not s.exists) or (action == "unstage" and s.exists and not s.head_exists))
+    if count == 0 and not mode_only then
       complete(opts, "No matching hunk")
       return
     end
@@ -95,7 +97,7 @@ function M.change(action, opts)
         return
       end
       -- This edits only the buffer; disk is changed by an explicit user save.
-      api.nvim_buf_set_lines(buf, 0, -1, false, #desired.lines == 0 and { "" } or desired.lines)
+      api.nvim_buf_set_lines(buf, 0, -1, false, desired.lines)
       vim.bo[buf].endofline = desired.eol
       buffer.refresh(buf, function(refresh_err)
         complete(opts, refresh_err)
@@ -141,7 +143,11 @@ end
 function M.nav(direction, opts)
   opts = opts or {}
   if vim.wo.diff then
-    vim.cmd.normal({ (direction == "prev" or direction == "first") and "[c" or "]c", bang = true })
+    local motion = (direction == "prev" or direction == "first") and "[c" or "]c"
+    if direction == "first" or direction == "last" then
+      motion = vim.fn.line("$") .. motion
+    end
+    vim.cmd.normal({ motion, bang = true })
     return
   end
   local win = api.nvim_get_current_win()
@@ -190,10 +196,11 @@ function M.select()
   for _, change in ipairs(s.hunks) do
     local first, last = h.bounds(change)
     if first <= line and line <= last then
-      vim.cmd("normal! \27")
-      api.nvim_win_set_cursor(0, { first, 0 })
-      vim.cmd("normal! V")
-      api.nvim_win_set_cursor(0, { math.min(last, api.nvim_buf_line_count(buf)), 0 })
+      local start = first .. "G"
+      if vim.fn.mode():lower() == "v" then
+        start = start .. "o"
+      end
+      vim.cmd("normal! " .. start .. "V" .. math.min(last, api.nvim_buf_line_count(buf)) .. "G")
       return
     end
   end

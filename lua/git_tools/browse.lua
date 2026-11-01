@@ -85,8 +85,10 @@ function M.open(opts, callback)
       vim.fn.setreg("+", url)
       vim.notify("Copied " .. url, vim.log.levels.INFO, { title = "Git tools" })
     else
-      local opened, failure = pcall(opts.open or vim.ui.open, url)
+      local opened, result, failure = pcall(opts.open or vim.ui.open, url)
       if not opened then
+        git.notify(result)
+      elseif not result and failure then
         git.notify(failure)
       end
     end

@@ -38,6 +38,7 @@ git_tools.setup({buffer={...}})                       *git-tools-buffer*
     Opt into automatic buffer tracking. Defaults: signs=false, numhl=true,
     word_diff=false, line_blame=false, debounce=100 (ms). buffer=false disables
     initial setup. No global mappings are installed.
+    Optional on_attach(buf) runs once after the first ready repository snapshot.
     nav_hunk("next"|"prev"|"first"|"last"), select_hunk(), preview_hunk(),
     toggle_overlay(buf), get_hunks(buf), toggle(name,optional_boolean).
 
@@ -76,6 +77,12 @@ git_tools.merge(opts)                                *git-tools-merge*
     opens base. S explicitly saves and stages, refusing remaining markers.
     Choosing content alone never stages. Supports diff3 conflict markers.
     Missing sides are empty; deleting a result remains an explicit Git action.
+
+:GitTools [action] [revision [revision]]               *:GitTools*
+    Installed by setup(). Default action: status. Also log, file_history,
+    line_history, blame, browse, compare, merge, stage, unstage, reset and
+    *_buffer variants. compare accepts from/to; log accepts a revision.
+    Ex ranges select lines for blame/history/browse/hunk operations.
 
 diff.unified(before, after, opts)                      *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.

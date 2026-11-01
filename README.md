@@ -25,8 +25,9 @@ This repository is currently a local plugin. With lazy.nvim:
 }
 ```
 
-Point `dir` at your checkout. No `setup()` call is needed. Requiring the module
-installs no mappings, commands, autocmds or processes.
+Point `dir` at your checkout. Query APIs need no `setup()` call. Requiring the
+module installs no mappings, commands, autocmds or processes. `setup()` enables
+buffer tracking and the `:GitTools` command; it never installs global mappings.
 
 ## Repository changes
 
@@ -112,6 +113,8 @@ Each mutation accepts `callback(err)`. Repeated index mutations are rejected.
 
 Index watchers (plus a 500ms inode poll for coalesced filesystem events) and
 buffer/focus events refresh attached buffers. Debounce defaults to 100ms.
+`buffer.on_attach(buf)` optionally installs your buffer-local mappings once the
+first repository snapshot is ready.
 `GitToolsUpdate` User events carry `data.buf`; `vim.b.git_tools_status` contains
 added/changed/removed/head. `GitToolsAdd/Change/Delete` highlight groups support
 statuscolumn patterns; add `"GitTools"` to Snacks' Git patterns. Optional adapters:
@@ -239,6 +242,7 @@ Install this local checkout alongside consumers until a remote release exists.
 
 ```sh
 sh tests/run.sh
+python3 tests/tui.py
 # Optional picker integration uses the sibling selection-tools.nvim checkout:
 SELECTION_TOOLS_DIR=/path/to/selection-tools.nvim sh tests/run.sh
 ```
@@ -248,6 +252,12 @@ native/ANSI rendering, literal arguments, timeout/error fallback, cancellation,
 resize generations, and optional picker frame ownership. The rendering core
 tests do not import a picker or run Git. Picker integration uses real delta when
 installed. Consumer LSP and terminal workflows are covered in lsp-tools.nvim.
+
+The Git fixture suite covers repository paths/worktrees, history/blame/links,
+partial index operations, unsaved buffers, newline preservation, external index
+updates, native comparison tabs and real merge conflicts. `tests/tui.py` drives
+continuous keyboard input, overlay, Visual staging and operator-pending `dih`.
+Set `GIT_TOOLS_CONFIG=/path/to/nvim` to exercise its git-tools keymap spec too.
 
 MIT licensed. The renderer originated in selection-tools.nvim; its MIT copyright
 notice is retained in [LICENSE](LICENSE).
