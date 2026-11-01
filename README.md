@@ -1,7 +1,7 @@
 # git-tools.nvim
 
-Reusable diff generation and preview rendering for Neovim. This first version
-provides a diff core; it does not add Git status, staging, log or commit commands.
+Git workflows and reusable diff generation/preview rendering for Neovim.
+The text diff core remains independent of Git and works outside repositories.
 
 The core compares ordinary text and unsaved contents, including outside Git
 repositories. It has no selection-tools, Snacks, LSP or Git executable dependency.
@@ -27,6 +27,24 @@ This repository is currently a local plugin. With lazy.nvim:
 
 Point `dir` at your checkout. No `setup()` call is needed. Requiring the module
 installs no mappings, commands, autocmds or processes.
+
+## Repository changes
+
+```lua
+require("git_tools").status({ backend = "delta" })
+-- Optional: cwd = "/project", kind = "staged" | "unstaged" | "untracked"
+```
+
+Requires Git and selection-tools.nvim. Lists index and working-tree changes
+separately, including untracked files and conflicts. Type to filter, select a
+file to edit it, or use the picker's standard quickfix/split actions. The preview
+shows the selected Git patch, including binary summaries; it compares disk to
+index, and index to HEAD, rather than silently including unsaved buffers.
+The default repository follows the current file (falling back to cwd for unnamed
+buffers); explicit `cwd` selects another repository. Linked worktrees and unusual
+filenames are supported. Queries/previews are asynchronous, bounded by a timeout,
+and cancelled on close or selection changes. `picker = { ... }` customizes the
+optional selection-tools UI. The picker dependency loads only when invoked.
 
 ## Generate a patch
 

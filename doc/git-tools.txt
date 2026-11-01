@@ -5,6 +5,14 @@ API                                                  *git-tools-api*
 require("git_tools").diff and require("git_tools.diff") expose the same module.
 No setup, global mappings, commands or Git repository are required.
 
+require("git_tools").status(opts)                     *git-tools-status*
+    Open repository changes in optional selection-tools.nvim. Git required.
+    opts.cwd defaults to the current file's directory, then editor cwd.
+    opts.kind filters staged/unstaged/untracked/conflict; backend="delta"
+    enables ANSI previews. opts.picker customizes the selection-tools UI.
+    Patches represent disk/index/HEAD, not unsaved buffer changes. Selection
+    opens the working file at its first hunk. Git processes cancel on close.
+
 diff.unified(before, after, opts)                      *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.
     Strings preserve final newlines. Lists contain terminated newline-free
