@@ -1,6 +1,10 @@
 -- Requiring the plugin installs no mappings, commands, UI or Git processes.
 local M = { diff = require("git_tools.diff") }
 
+function M.lazygit(opts)
+  return require("git_tools.lazygit").open(opts)
+end
+
 function M.compare(opts)
   return require("git_tools.view").open(opts)
 end
@@ -16,6 +20,9 @@ end
 
 function M.setup(opts)
   opts = opts or {}
+  if opts.lazygit then
+    require("git_tools.lazygit").configure(opts.lazygit)
+  end
   if opts.buffer ~= false then
     require("git_tools.buffer").setup(opts.buffer)
   end
@@ -30,6 +37,7 @@ function M.setup(opts)
       browse = M.browse,
       compare = M.compare,
       merge = M.merge,
+      lazygit = M.lazygit,
       stage = M.stage_hunk,
       unstage = M.unstage_hunk,
       reset = M.reset_hunk,
@@ -65,6 +73,7 @@ function M.setup(opts)
         "browse",
         "compare",
         "merge",
+        "lazygit",
         "stage",
         "unstage",
         "reset",

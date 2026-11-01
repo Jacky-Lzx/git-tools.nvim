@@ -6,6 +6,7 @@ from pathlib import Path
 import pty
 import select
 import shutil
+import signal
 import struct
 import subprocess
 import tempfile
@@ -35,6 +36,9 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
     state = directory / "state.json"
     env = dict(os.environ, TERM="xterm-256color", GIT_TOOLS_ROOT=str(root), GIT_TOOLS_TUI_STATE=str(state),
                XDG_STATE_HOME=str(directory / "state"), XDG_CACHE_HOME=str(directory / "cache"), NVIM_LOG_FILE=str(directory / "nvim.log"))
+    lazygit_config = directory / "lazygit"
+    lazygit_config.mkdir()
+    env["GIT_TOOLS_TEST_LAZYGIT_CONFIG"] = str(lazygit_config)
     process = subprocess.Popen([shutil.which("nvim"), "-n", "-i", "NONE", "-u", str(root / "tests/tui.lua"), str(fixture / "sample.txt")],
                                stdin=slave, stdout=slave, stderr=slave, env=env)
     transcript = bytearray()
@@ -62,7 +66,7 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
                 value = json.loads(state.read_text())
                 if predicate(value):
                     return value
-        raise AssertionError(message + "\n" + transcript.decode(errors="replace")[-4000:])
+        raise AssertionError(message + "\n" + (json.dumps(value, ensure_ascii=False) if state.exists() else "No snapshot") + "\n" + transcript.decode(errors="replace")[-1000:])
 
     try:
         drain(0.6)
@@ -85,6 +89,40 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
         snapshot(lambda value: value["lines"][0] == "TWO", "Operator-pending dih failed")
         send("u")
         snapshot(lambda value: value["lines"][0] == "ONE", "Hunk deletion did not undo")
+        if shutil.which("lazygit"):
+            send("\x07")
+            drain(0.7)
+            send("\x1c\x0e")
+            terminal = snapshot(lambda value: value.get("lazygit", {}).get("running") and value["filetype"] == "git-tools-lazygit", "Real LazyGit did not open in the float")
+            assert terminal["lazygit"]["relative"] == "editor"
+            assert any(word in "\n".join(terminal["lines"]).lower() for word in ("lazygit", "files", "commits")), "No LazyGit UI rendered"
+            send(":lua require('git_tools').lazygit()\r")
+            send("\x1c\x0e")
+            snapshot(lambda value: value.get("lazygit", {}).get("job") == terminal["lazygit"]["job"], "Repeated open replaced the LazyGit job")
+            fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 34, 120, 0, 0))
+            os.kill(process.pid, signal.SIGWINCH)
+            drain(0.2)
+            snapshot(lambda value: value.get("lazygit", {}).get("width") == int(118 * 0.9), "Real terminal resize did not update the float")
+            send("\x07")
+            snapshot(lambda value: value["lines"][0] == "ONE" and not value.get("lazygit"), "Close key did not preserve the source buffer")
+            send("\x07")
+            drain(0.4)
+            send("\x1b")
+            send("q")
+            drain(0.4)
+            send("\x1c\x0e")
+            closed = snapshot(lambda value: True, "Cannot inspect LazyGit exit")
+            for _ in range(3):
+                if not closed.get("lazygit"):
+                    break
+                send("i")
+                send("\x1b")
+                send("q")
+                drain(0.3)
+                send("\x1c\x0e")
+                closed = snapshot(lambda value: True, "Cannot inspect LazyGit exit")
+            assert not closed.get("lazygit") and closed["lines"][0] == "ONE", "Real LazyGit quit did not close its window: " + json.dumps(closed, ensure_ascii=False)
+            print("git TUI: real LazyGit float, repeated open, resize, close/reopen and quit passed")
         assert len(transcript) > 500, "No real terminal frames captured"
         print("git TUI: continuous typing, first overlay, Visual staging, dih and undo passed")
     finally:

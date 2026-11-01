@@ -82,6 +82,26 @@ require tracked files; line ranges refer to remote committed content, so unsaved
 insertions can shift their meaning. `browse(opts, callback)` returns the URL via
 `callback(err,url)` instead of opening/copying it. No remote request is made by Git.
 
+## Lazygit floating terminal
+
+```lua
+require("git_tools").lazygit()
+-- Optional cwd, command, args={}, env={}, width=0.9, height=0.9, border="rounded"
+-- Also available after setup(): :GitTools lazygit
+```
+
+Requires the external `lazygit` executable. Opens a centered terminal in the
+current file's directory (editor cwd for unnamed/special buffers). LazyGit finds
+the repository itself. Repeated calls focus the existing session. `<C-g>` closes
+the float from terminal or Normal mode; Normal-mode `q` also closes it. Escape and
+other terminal keys pass through to LazyGit. Closing stops the job and releases
+the terminal buffer; successful exit closes automatically, while failure output
+remains visible. Resizing follows the editor, and closing refreshes file/index
+state without discarding unsaved buffers. No Snacks or picker dependency.
+Returns a session with `buf`, `win`, `job` and `:close()`/`:resize()` methods.
+`setup({ lazygit = { ... } })` optionally sets launcher defaults. Arguments use
+literal argv; the launcher inherits LazyGit's existing configuration unchanged.
+
 ## Buffer hunks and overlay
 
 ```lua
@@ -258,6 +278,9 @@ partial index operations, unsaved buffers, newline preservation, external index
 updates, native comparison tabs and real merge conflicts. `tests/tui.py` drives
 continuous keyboard input, overlay, Visual staging and operator-pending `dih`.
 Set `GIT_TOOLS_CONFIG=/path/to/nvim` to exercise its git-tools keymap spec too.
+When LazyGit is installed, this TUI check also opens its real interface using an
+isolated configuration directory and verifies resize, close/reopen and quit.
+That part needs normal terminal access (`/dev/tty`).
 
 MIT licensed. The renderer originated in selection-tools.nvim; its MIT copyright
 notice is retained in [LICENSE](LICENSE).

@@ -80,9 +80,20 @@ git_tools.merge(opts)                                *git-tools-merge*
 
 :GitTools [action] [revision [revision]]               *:GitTools*
     Installed by setup(). Default action: status. Also log, file_history,
-    line_history, blame, browse, compare, merge, stage, unstage, reset and
+    line_history, blame, browse, compare, merge, lazygit, stage, unstage, reset and
     *_buffer variants. compare accepts from/to; log accepts a revision.
     Ex ranges select lines for blame/history/browse/hunk operations.
+
+git_tools.lazygit(opts)                               *git-tools-lazygit*
+    Open external LazyGit in a centered floating terminal. No Snacks required.
+    Defaults: command="lazygit", args={}, width=0.9, height=0.9, border="rounded".
+    Width/height accept fractions or cell counts. Optional cwd/env; default cwd
+    is current file's directory, then editor cwd. Repeated calls focus the
+    existing session. C-g closes in terminal/Normal mode; Normal q also closes.
+    Escape passes through. Closing stops the job and frees the terminal buffer.
+    Successful exit closes automatically; failures retain output. Original
+    buffers are preserved and file/index state refreshed. Returns session with
+    buf/win/job and :close()/:resize(). setup({lazygit={...}}) sets defaults.
 
 diff.unified(before, after, opts)                      *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.
