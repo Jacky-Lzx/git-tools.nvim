@@ -260,9 +260,14 @@ The host supplies this view contract:
 
 For ANSI output, `metadata = { owned = true, title = ... }`. The host owns the
 adopted buffer and deletes it on replacement or close, including a rejected frame.
-Git-tools owns delta processes, cancellation and render generations. It creates
-no windows. Calls and publication run on Neovim's main thread. An optional fourth
-argument `valid()` supplies an additional caller-specific validity check.
+Git-tools owns delta processes, cancellation, render generations and temporary
+hidden preparation windows. ANSI output is prepared at the preview's dimensions
+and adopted only after terminal text is ready, so the host keeps its previous
+frame during rendering. Preparation windows and unadopted buffers are released
+on publication, cancellation, resize, failure or timeout. The host owns its visible
+preview window and adopted buffers. Calls and publication run on Neovim's main
+thread. An optional fourth argument `valid()` supplies an additional caller-specific
+validity check.
 
 Delta receives literal argv, stdin and a bounded timeout. Paging is disabled;
 width and dark/light mode follow the preview. Missing delta, spawn errors, failure,

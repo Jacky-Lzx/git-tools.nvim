@@ -17,7 +17,7 @@ function ctx.preview:set_lines(lines)
   self.lines = lines
 end
 function ctx.preview:highlight() end
-local adopted
+local adopted, prepared
 ctx.is_cancelled = function()
   return false
 end
@@ -26,19 +26,23 @@ ctx.set_lines = function(lines, ft, title)
   ctx.preview:set_title(title)
 end
 ctx.set_buffer = function(buf, metadata)
+  check(buf == prepared and sent ~= "", "only prepared ANSI frames are adopted")
+  check(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] ~= "", "blank frames are never published")
   adopted = buf
   ctx.preview:set_title(metadata.title)
   return true
 end
 local args, process_opts, complete, process
 vim.api.nvim_open_term = function(buf)
-  check(buf == adopted, "ANSI rendering uses an owned selection preview buffer")
+  check(buf ~= adopted, "ANSI rendering prepares a buffer before adopting it")
+  prepared = buf
   terminal = terminal + 1
   return 100
 end
 vim.api.nvim_chan_send = function(channel, text)
   check(channel == 100, "ANSI output goes to renderer channel")
   sent = text
+  vim.api.nvim_buf_set_lines(prepared, 0, -1, false, { "rendered ANSI text" })
 end
 local available = true
 vim.fn.executable = function()
@@ -156,5 +160,52 @@ complete({ code = 0, stdout = "new width" })
 flush()
 check(terminal == rendered_before + 1, "resize publishes the current generation")
 handle:close()
+
+local write_terminal = vim.api.nvim_chan_send
+vim.api.nvim_chan_send = function() end
+local windows, previous = #vim.api.nvim_list_wins(), adopted
+handle = start()
+complete({ code = 0, stdout = "pending ANSI" })
+flush()
+local pending_buf = prepared
+check(adopted == previous and vim.api.nvim_buf_is_valid(pending_buf), "pending terminal keeps the previous frame")
+check(#vim.api.nvim_list_wins() == windows + 1, "terminal preparation uses one hidden window")
+handle:close()
+check(not vim.api.nvim_buf_is_valid(pending_buf), "cancellation deletes the unadopted frame")
+check(#vim.api.nvim_list_wins() == windows, "cancellation closes the hidden window")
+
+handle = start()
+complete({ code = 0, stdout = "old width pending ANSI" })
+flush()
+pending_buf = prepared
+handle:resize()
+check(not vim.api.nvim_buf_is_valid(pending_buf), "resize discards pending terminal preparation")
+vim.api.nvim_chan_send = write_terminal
+complete({ code = 0, stdout = "ready resized ANSI" })
+flush()
+check(
+  adopted == prepared and #vim.api.nvim_list_wins() == windows,
+  "ready resized frame publishes without leaking windows"
+)
+handle:close()
+
+vim.api.nvim_chan_send = function() end
+config.delta.timeout = 10
+handle = start()
+complete({ code = 0, stdout = "never reaches the terminal" })
+flush()
+pending_buf = prepared
+check(
+  vim.wait(100, function()
+    return not vim.api.nvim_buf_is_valid(pending_buf)
+  end, 1),
+  "unready terminal preparation has a bounded timeout"
+)
+check(
+  #vim.api.nvim_list_wins() == windows and vim.deep_equal(ctx.preview.lines, lines),
+  "preparation timeout cleans up and falls back"
+)
+handle:close()
+vim.api.nvim_chan_send = write_terminal
 print(("git-tools render: %d assertions passed"):format(count))
 vim.cmd("qa!")
