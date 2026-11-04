@@ -30,8 +30,8 @@ local function apply(c)
   local bg = c.palette.bg
   -- Keep syntax foregrounds intact, including themes whose DiffAdd uses reverse.
   local groups = {
-    Add = { bg = mix(c.git.add, bg, 0.22) },
-    Delete = { bg = mix(c.git.delete, bg, 0.24) },
+    Add = { bg = mix(c.git.add, bg, 0.10) },
+    Delete = { bg = mix(c.git.delete, bg, 0.13) },
     AddText = { bg = mix(c.git.add, bg, 0.48), bold = true, underline = true },
     DeleteText = { bg = mix(c.git.delete, bg, 0.50), bold = true, underline = true },
     AddNumber = { fg = c.git.add },
