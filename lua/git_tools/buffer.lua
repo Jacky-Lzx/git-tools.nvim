@@ -406,8 +406,11 @@ function M.toggle_overlay(buf)
 end
 
 local function groups()
+  -- DiffAdd may use an inverted foreground/background (e.g. Dracula).
+  -- The syntax group carries the addition color without a line background.
+  api.nvim_set_hl(0, "diffAdded", { link = "Added", default = true })
   for name, target in pairs({
-    Add = "DiffAdd",
+    Add = "diffAdded",
     Change = "DiffChange",
     Delete = "DiffDelete",
     AddLine = "DiffAdd",
