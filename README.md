@@ -10,8 +10,9 @@ An optional adapter makes it a preview provider for selection-tools.nvim.
 ## Requirements and local installation
 
 - Neovim 0.10+ APIs; currently validated with Neovim 0.12.6.
-- Optional `delta` for ANSI diff rendering; unavailable or failed delta falls
-  back to native diff highlighting.
+- Native Lua previews by default, with optional theme-tools.nvim palette sync.
+- Optional `delta` for ANSI rendering; unavailable or failed delta falls back
+  to the native renderer.
 - Optional selection-tools.nvim for picker windows.
 
 This repository is currently a local plugin. With lazy.nvim:
@@ -32,7 +33,7 @@ buffer tracking and the `:GitTools` command; it never installs global mappings.
 ## Repository changes
 
 ```lua
-require("git_tools").status({ backend = "delta" })
+require("git_tools").status() -- native preview; backend = "delta" remains available
 -- Optional: cwd = "/project", kind = "staged" | "unstaged" | "untracked"
 ```
 
@@ -241,8 +242,15 @@ use it. `context` defaults to 3 and accepts a nonnegative integer.
 
 ```lua
 local handle = require("git_tools.diff").render(view, patch, {
-  backend = "delta", -- "vim" or "delta"; default "vim"
+  backend = "native", -- default; "delta" or plain "vim" also available
   cwd = project_root,
+  native = {
+    line_numbers = true,
+    file_header = true,
+    syntax = true,
+    word_diff = true,
+    -- ft = "lua", -- override filetype inferred from patch labels
+  },
   delta = { command = "delta", args = {}, timeout = 2000 },
 })
 -- handle:resize() renders again using the preview's current width.
@@ -269,6 +277,33 @@ preview window and adopted buffers. Calls and publication run on Neovim's main
 thread. An optional fourth argument `valid()` supplies an additional caller-specific
 validity check.
 
+The default native renderer prepares a normal, read-only scratch buffer and
+publishes it with the same `set_buffer` ownership contract. It shows compact
+file/hunk headings, old/new line numbers, addition/deletion backgrounds and
+multiple UTF-8-safe inline change spans. Gutters and hunk rules are virtual:
+copying code lines does not copy line numbers or `+`/`-` markers. Resize updates
+rules in place, preserving the preview buffer and scroll position. Summaries
+without text hunks use `set_lines`; `backend = "vim"` retains raw patch text.
+Frame metadata also identifies the actual `backend` (`"native"` or `"delta"`),
+including when a requested delta preview falls back to native rendering.
+
+When theme-tools is loaded, native colors subscribe to its semantic palette,
+including overrides and live theme changes. Without it, standard editor
+highlights supply the colors. Code syntax uses installed Tree-sitter parsers
+and queries for each side of each hunk; missing parsers leave plain code with
+diff colors. Syntax is inferred from the displayed snippets, so constructs
+whose opening context is outside a hunk may not color like a full source file.
+Native rendering preserves delta's visual conventions rather than interpreting
+delta themes or arguments. Use `native.file_header = false` for compact undo
+and LSP previews. Delta options apply only to `backend = "delta"`.
+
+Native previews are limited to 10,000 patch lines / 1 MiB and visibly indicate
+truncation (`metadata.truncated = true`). Syntax work is capped at 128 snippets,
+200 KB and 30,000 highlight spans; inline matching is bounded to replacement
+blocks of 32 lines per side and lines of 4 KB. Larger changes retain line-level
+backgrounds. This backend currently renders unified diffs; delta remains an
+option for its side-by-side layout and exact syntax/theme behavior.
+
 Delta receives literal argv, stdin and a bounded timeout. Paging is disabled;
 width and dark/light mode follow the preview. Missing delta, spawn errors, failure,
 empty output, terminal-render errors and timeouts fall back to native diff.
@@ -285,7 +320,7 @@ require("selection_tools").open({
   preview = {
     enabled = true,
     providers = {
-      require("git_tools.integrations.selection").diff({ backend = "delta" }),
+      require("git_tools.integrations.selection").diff(),
     },
   },
 })

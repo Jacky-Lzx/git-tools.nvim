@@ -139,7 +139,22 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     set_lines(lines,ft,title) and set_buffer(buf,metadata). set_buffer returns
     false for an obsolete frame. Adopted owned=true frames must be deleted by
     the host on replacement, rejection or close. Calls use the main thread.
-    opts.backend is "vim" (default) or "delta". delta accepts command="delta",
+    opts.backend is "native" (default), plain "vim" or "delta".
+    Native renders ordinary read-only buffers with virtual line numbers and
+    +/- markers, line backgrounds, UTF-8 inline changes and Tree-sitter syntax
+    when installed. Copying code excludes gutters. Theme-tools' semantic
+    palette and live updates supply colors when loaded; editor highlights
+    provide standalone defaults. Resize preserves the buffer and scroll.
+    opts.native accepts line_numbers=true, file_header=true, syntax=true,
+    word_diff=true and optional ft to override patch-label filetype detection.
+    Set file_header=false for compact undo/LSP previews. Delta args are not
+    interpreted by the native backend. Syntax uses hunk snippets rather than
+    complete files. Missing parsers retain readable code and diff backgrounds.
+    Native previews cap input at 10,000 lines / 1 MiB and mark truncation.
+    Syntax caps: 128 snippets / 200 KB / 30,000 spans. Inline pairing caps:
+    32 lines per side / 4 KB per line. Large changes retain line backgrounds.
+    Side-by-side layout remains available through delta.
+    delta accepts command="delta",
     args={} and timeout=2000. cwd is explicit and never inferred from an LSP.
     valid() is an optional additional validity check. Return handle:close()
     and handle:resize(). The host keeps window and buffer lifecycle ownership.

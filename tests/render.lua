@@ -26,6 +26,11 @@ ctx.set_lines = function(lines, ft, title)
   ctx.preview:set_title(title)
 end
 ctx.set_buffer = function(buf, metadata)
+  if vim.b[buf].git_tools_diff then
+    adopted = buf
+    ctx.preview.lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    return true
+  end
   check(buf == prepared and sent ~= "", "only prepared ANSI frames are adopted")
   check(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] ~= "", "blank frames are never published")
   adopted = buf
@@ -74,6 +79,12 @@ local function flush()
     return false
   end, 1)
 end
+local function native_fallback()
+  return adopted
+    and vim.api.nvim_buf_is_valid(adopted)
+    and vim.b[adopted].git_tools_diff
+    and vim.tbl_contains(ctx.preview.lines, "new")
+end
 local stop = start()
 check(args[1] == "delta" and vim.tbl_contains(args, "--line-numbers"), "executable and extra arguments")
 check(
@@ -99,15 +110,12 @@ for _, output in ipairs({
   start()
   complete(output)
   flush()
-  check(vim.deep_equal(ctx.preview.lines, lines), "failure, timeout or empty output falls back")
+  check(native_fallback(), "failure, timeout or empty output falls back to a native frame")
 end
 local before = system_calls
 available = false
 start()
-check(
-  system_calls == before and vim.deep_equal(ctx.preview.lines, lines),
-  "missing executable falls back without spawning"
-)
+check(system_calls == before and native_fallback(), "missing executable falls back without spawning")
 available = true
 config.backend = "vim"
 start()
@@ -143,7 +151,7 @@ vim.system = function()
   error("spawn failed")
 end
 start()
-check(vim.deep_equal(ctx.preview.lines, lines), "spawn errors fall back")
+check(native_fallback(), "spawn errors fall back")
 vim.system = system
 config.delta.args = { "--light", "--line-numbers", "literal `value` $(value)" }
 start()
@@ -201,10 +209,7 @@ check(
   end, 1),
   "unready terminal preparation has a bounded timeout"
 )
-check(
-  #vim.api.nvim_list_wins() == windows and vim.deep_equal(ctx.preview.lines, lines),
-  "preparation timeout cleans up and falls back"
-)
+check(#vim.api.nvim_list_wins() == windows and native_fallback(), "preparation timeout cleans up and falls back")
 handle:close()
 vim.api.nvim_chan_send = write_terminal
 print(("git-tools render: %d assertions passed"):format(count))

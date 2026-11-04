@@ -5,12 +5,55 @@ function M.render(ctx, lines, opts, valid)
   opts = opts or {}
   local delta = vim.tbl_extend("force", { command = "delta", args = {}, timeout = 2000 }, opts.delta or {})
   local cancelled, process, generation, pending = false, nil, 0, nil
+  local native_buf
+  local has_hunks = false
+  for _, line in ipairs(lines) do
+    if line:match("^@@ %-%d+[, ]") then
+      has_hunks = true
+      break
+    end
+  end
   local function current()
     return not cancelled and not ctx.is_cancelled() and (not valid or valid())
   end
   local function plain()
     if current() then
       ctx.set_lines(lines, "diff", opts.title or "Preview")
+    end
+  end
+  local function native()
+    if not current() then
+      return
+    end
+    if not ctx.set_buffer or not has_hunks then
+      plain()
+      return
+    end
+    local buf
+    local ok, adopted = pcall(function()
+      local renderer = require("git_tools.diff.native")
+      local width = vim.api.nvim_win_get_width(ctx.win)
+      if native_buf and vim.api.nvim_buf_is_valid(native_buf) then
+        renderer.resize(native_buf, width)
+        return true
+      end
+      local truncated
+      buf, truncated = renderer.prepare(lines, opts.native, width)
+      if not current() then
+        return false
+      end
+      return ctx.set_buffer(
+        buf,
+        { owned = true, backend = "native", title = opts.title or "Preview · diff", truncated = truncated }
+      )
+    end)
+    if ok and adopted then
+      native_buf = buf or native_buf
+    else
+      if buf and vim.api.nvim_buf_is_valid(buf) then
+        vim.api.nvim_buf_delete(buf, { force = true })
+      end
+      plain()
     end
   end
   local function release(frame, adopted)
@@ -48,8 +91,12 @@ function M.render(ctx, lines, opts, valid)
       return
     end
     local text = table.concat(lines, "\n")
-    if opts.backend ~= "delta" or not text:find("\n@@ ", 1, true) or vim.fn.executable(delta.command) ~= 1 then
+    if opts.backend == "vim" then
       plain()
+      return
+    end
+    if opts.backend ~= "delta" or not has_hunks or vim.fn.executable(delta.command) ~= 1 then
+      native()
       return
     end
     local cmd = {
@@ -75,7 +122,7 @@ function M.render(ctx, lines, opts, valid)
           return
         end
         if output.code ~= 0 or not output.stdout or output.stdout == "" then
-          plain()
+          native()
           return
         end
         local frame = { buf = vim.api.nvim_create_buf(false, true) }
@@ -97,10 +144,11 @@ function M.render(ctx, lines, opts, valid)
           if not table.concat(vim.api.nvim_buf_get_lines(frame.buf, 0, -1, false)):find("%S") then
             return
           end
-          local ok, adopted = pcall(ctx.set_buffer, frame.buf, { owned = true, title = "Preview · delta" })
+          local ok, adopted =
+            pcall(ctx.set_buffer, frame.buf, { owned = true, backend = "delta", title = "Preview · delta" })
           release(frame, ok and adopted)
           if not ok or not adopted then
-            plain()
+            native()
           end
         end
         local rendered = pcall(function()
@@ -137,7 +185,7 @@ function M.render(ctx, lines, opts, valid)
             if not frame.closed then
               release(frame)
               if current() and generation == current_generation then
-                plain()
+                native()
               end
             end
           end, delta.timeout)
@@ -145,14 +193,14 @@ function M.render(ctx, lines, opts, valid)
         end)
         if not rendered then
           release(frame)
-          plain()
+          native()
         end
       end)
     end)
     if ok then
       process = result
     else
-      plain()
+      native()
     end
   end
   local handle = {}

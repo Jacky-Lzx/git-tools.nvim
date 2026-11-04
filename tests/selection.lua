@@ -17,6 +17,7 @@ local function run(backend)
     local buf = api.nvim_win_get_buf(p.preview_win)
     return backend == "delta" and vim.bo[buf].buftype == "terminal"
       or backend == "vim" and vim.bo[buf].filetype == "diff"
+      or backend == "native" and vim.b[buf].git_tools_diff == true
   end)
   local frame = api.nvim_win_get_buf(p.preview_win)
   p:move(1)
@@ -25,21 +26,23 @@ local function run(backend)
       and (api.nvim_buf_get_lines(p.preview_buf, 0, 1, false)[1] or ""):find("command only", 1, true)
   end)
   assert(api.nvim_buf_get_lines(p.preview_buf, 0, 1, false)[1]:find("command only", 1, true))
-  if backend == "delta" then
-    assert(not api.nvim_buf_is_valid(frame), "retired ANSI frame was not released")
+  if backend ~= "vim" then
+    assert(not api.nvim_buf_is_valid(frame), "retired renderer frame was not released")
   end
   p:move(-1)
   wait(function()
     local buf = api.nvim_win_get_buf(p.preview_win)
     return backend == "delta" and vim.bo[buf].buftype == "terminal"
       or backend == "vim" and api.nvim_buf_get_lines(buf, 0, 1, false)[1] == patch[1]
+      or backend == "native" and vim.b[buf].git_tools_diff == true
   end)
   local final_frame = api.nvim_win_get_buf(p.preview_win)
   p:close()
   assert(not api.nvim_buf_is_valid(final_frame))
 end
 run("vim")
-local backends = "native"
+run("native")
+local backends = "plain/native"
 if vim.fn.executable("delta") == 1 then
   run("delta")
   backends = backends .. "/ANSI"

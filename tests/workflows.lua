@@ -30,7 +30,7 @@ assert(
     return p:current() ~= nil
       and table
           .concat(api.nvim_buf_get_lines(api.nvim_win_get_buf(p.preview_win), 0, -1, false), "\n")
-          :find("+new", 1, true)
+          :find("\nnew", 1, true)
         ~= nil
   end, 5),
   "Status picker must load real Git results and patch"
