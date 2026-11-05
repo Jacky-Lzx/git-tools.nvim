@@ -10,6 +10,7 @@ function M.diff(opts)
       return false
     end
     local config = vim.tbl_extend("force", {}, opts)
+    config.sources = opts.sources or type(item) == "table" and item.sources or nil
     config.cwd = opts.cwd or type(item) == "table" and item.root or nil
     return require("git_tools.diff").render(ctx, lines, config)
   end

@@ -79,7 +79,8 @@ function M.query(task, repo, opts, callback)
 end
 
 function M.patch(task, item, callback)
-  local args = { "show", "--format=fuller", "--no-ext-diff", "--no-textconv", "--no-color", item.sha, "--" }
+  local args =
+    { "show", "--format=fuller", "--no-ext-diff", "--no-textconv", "--no-color", "--full-index", item.sha, "--" }
   -- A followed file can have a different historical name. Preview the complete
   -- commit rather than filtering it with the current filename and hiding data.
   git.run(task, item.root, args, function(err, output)

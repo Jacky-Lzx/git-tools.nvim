@@ -28,7 +28,7 @@ end
 function M.preview(loader, opts)
   return function(ctx)
     local task, renderer = git.task(), nil
-    loader(task, ctx.item, function(err, lines)
+    loader(task, ctx.item, function(err, lines, sources)
       if task.cancelled or ctx.is_cancelled() then
         return
       end
@@ -39,13 +39,21 @@ function M.preview(loader, opts)
       if #lines == 0 then
         lines = { "No text changes." }
       end
-      renderer = require("git_tools.diff").render(
-        ctx,
-        lines,
-        vim.tbl_extend("force", {
-          cwd = ctx.item.root,
-        }, opts or {})
-      )
+      local function publish(snapshots)
+        if task.cancelled or ctx.is_cancelled() then
+          return
+        end
+        renderer = require("git_tools.diff").render(
+          ctx,
+          lines,
+          vim.tbl_extend("force", {}, opts or {}, { cwd = ctx.item.root, sources = snapshots })
+        )
+      end
+      if sources then
+        publish(sources)
+      else
+        require("git_tools.diff.sources").git(task, ctx.item.root, lines, publish)
+      end
     end)
     return {
       close = function()

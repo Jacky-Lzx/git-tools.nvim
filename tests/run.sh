@@ -8,7 +8,7 @@ trap 'rm -rf "$test_tmp"' EXIT HUP INT TERM
 export XDG_STATE_HOME="$test_tmp/state"
 export XDG_CACHE_HOME="$test_tmp/cache"
 export NVIM_LOG_FILE="$test_tmp/nvim.log"
-for name in highlights unified native native_theme render repository browse browse_targets hunks views lazygit file_actions changes refs; do
+for name in highlights unified native syntax_sources git_sources native_theme render repository browse browse_targets hunks views lazygit file_actions changes refs; do
   nvim --headless -u NONE -n -i NONE -l "$root/tests/$name.lua"
 done
 if [ -f "$SELECTION_TOOLS_DIR/lua/selection_tools/init.lua" ]; then

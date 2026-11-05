@@ -81,6 +81,7 @@ function M.patch(task, item, callback, opts)
       "--no-ext-diff",
       "--no-textconv",
       "--no-color",
+      "--full-index",
       "--",
       "/dev/null",
       item.path,
@@ -93,7 +94,7 @@ function M.patch(task, item, callback, opts)
     end)
     return
   end
-  local args = { "diff", "--no-ext-diff", "--no-textconv", "--no-color", "--unified=3" }
+  local args = { "diff", "--no-ext-diff", "--no-textconv", "--no-color", "--full-index", "--unified=3" }
   if item.kind == "staged" then
     args[#args + 1] = "--cached"
   end

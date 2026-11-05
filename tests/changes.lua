@@ -29,6 +29,8 @@ local function apply(action, items, opts)
 end
 local items = query("unstaged")
 assert(#items == 2 and items[1].pos[1] < items[2].pos[1])
+assert(vim.deep_equal(items[1].sources[1].before, original))
+assert(vim.deep_equal(items[2].sources[1].after, edited), "Individual hunks retain the complete result of all changes")
 assert(items[1].lnum == 2 and items[2].lnum == 25, "Jump positions must exclude context lines")
 assert(not table.concat(items[1].lines, "\n"):find("second change", 1, true))
 apply("stage", { items[2] })

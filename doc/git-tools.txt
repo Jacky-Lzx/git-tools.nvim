@@ -133,6 +133,8 @@ diff.unified(before, after, opts)                      *git-tools-unified*
     lines; {} is empty text. opts.old_path/new_path label the inputs.
     context=3 controls surrounding lines and accepts nonnegative integers.
     No source buffers or files are modified or created.
+    The second result captures {before=lines, after=lines, ft=opts.ft} for
+    full-document syntax in render(). Retain it with the generated patch.
 
 diff.render(view, lines, opts, valid)                  *git-tools-render*
     Render into a host-owned window. view has win, is_cancelled(),
@@ -148,10 +150,20 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     opts.native accepts line_numbers=true, file_header=true, syntax=true,
     word_diff=true and optional ft to override patch-label filetype detection.
     Set file_header=false for compact undo/LSP previews. Delta args are not
-    interpreted by the native backend. Syntax uses hunk snippets rather than
-    complete files. Missing parsers retain readable code and diff backgrounds.
+    interpreted by the native backend. opts.sources is an array of snapshots
+    in ---/+++ section order, including repeated edits of one path. With these,
+    syntax parses the complete document once per side and maps visible rows.
+    Without them, or when visible text mismatches, syntax uses hunk snippets.
+    Git pickers reconstruct full versions from the patch's base blob, never
+    from the present working tree. Missing parsers retain readable code and
+    diff backgrounds.
+    Full-document syntax also projects rainbow spans from an already-loaded,
+    enabled pairs.nvim. native.decorations=false disables decorations;
+    native.highlights(lines,ft) overrides the optional provider. Return spans
+    with zero-based byte row,col,end_col,hl_group and optional priority.
+    Diff character emphasis remains above syntax and decorations.
     Native previews cap input at 10,000 lines / 1 MiB and mark truncation.
-    Syntax caps: 128 snippets / 200 KB / 30,000 spans. Inline pairing caps:
+    Syntax caps: 128 documents/snippets / 200 KB / 30,000 spans. Inline pairing caps:
     32 lines per side / 4 KB per line. Large changes retain line backgrounds.
     Side-by-side layout remains available through delta.
     delta accepts command="delta",

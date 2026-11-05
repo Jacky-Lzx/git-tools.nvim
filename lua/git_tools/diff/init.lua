@@ -28,7 +28,17 @@ function M.unified(before, after, opts)
   end
   local lines = { "--- " .. old, "+++ " .. new }
   vim.list_extend(lines, vim.split(result, "\n", { trimempty = true }))
-  return lines
+  local function snapshot(value)
+    if type(value) == "table" then
+      return vim.list_slice(value)
+    end
+    if value == "" then
+      return {}
+    end
+    return vim.split(value:sub(-1) == "\n" and value:sub(1, -2) or value, "\n", { plain = true })
+  end
+  -- The second result is tied to this patch, not to a path on disk.
+  return lines, { before = snapshot(before), after = snapshot(after), ft = opts.ft }
 end
 
 function M.render(view, lines, opts, valid)

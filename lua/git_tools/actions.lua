@@ -219,18 +219,19 @@ function M.preview(opts)
       git.notify("No matching hunk")
       return
     end
-    local lines = require("git_tools.diff").unified(s.index.text, projected.text, { old_path = s.path })
-    local buf = api.nvim_create_buf(false, true)
-    api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-    vim.bo[buf].filetype = "diff"
-    vim.bo[buf].modifiable = false
+    local lines, source = require("git_tools.diff").unified(s.index.text, projected.text, {
+      old_path = s.path,
+      ft = vim.bo[s.buf].filetype,
+    })
+    local width = math.max(1, math.min(100, vim.o.columns - 4))
+    local buf = require("git_tools.diff.native").prepare(lines, opts.native, width, { source })
     vim.bo[buf].bufhidden = "wipe"
     api.nvim_open_win(buf, true, {
       relative = "cursor",
       row = 1,
       col = 0,
-      width = math.max(1, math.min(100, vim.o.columns - 4)),
-      height = math.max(1, math.min(#lines, math.floor(vim.o.lines * 0.6))),
+      width = width,
+      height = math.max(1, math.min(api.nvim_buf_line_count(buf), math.floor(vim.o.lines * 0.6))),
       style = "minimal",
       border = "rounded",
     })

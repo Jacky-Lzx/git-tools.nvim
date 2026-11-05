@@ -290,15 +290,32 @@ including when a requested delta preview falls back to native rendering.
 When theme-tools is loaded, native colors subscribe to its semantic palette,
 including overrides and live theme changes. Without it, standard editor
 highlights supply the colors. Code syntax uses installed Tree-sitter parsers
-and queries for each side of each hunk; missing parsers leave plain code with
-diff colors. Syntax is inferred from the displayed snippets, so constructs
-whose opening context is outside a hunk may not color like a full source file.
+and queries. Pass `sources` to render each side from its complete document,
+then project captures onto visible diff lines. Git picker previews acquire the
+base blob identified by the patch and reconstruct its result without reading
+the current working tree. Missing parsers leave plain code with diff colors;
+patch-only callers retain snippet highlighting. Stale snapshots whose visible
+text does not match fall back to snippets for that side.
+
+`diff.unified(before, after, opts)` also returns a second value, a captured
+`{ before = lines, after = lines, ft = opts.ft }` snapshot. Supply it as
+`diff.render(view, patch, { sources = { snapshot } })`. For concatenated patches,
+provide one entry per `---`/`+++` file section, in patch order, including repeated
+edits of the same path. A file's hunks share one parse per side. The optional
+selection adapter accepts `item.sources` too.
+
+Full-document previews also project rainbow bracket colors when pairs.nvim is
+already loaded and enabled. They never load or configure pairs. Set
+`native.decorations = false` to disable this, or supply
+`native.highlights = function(lines, ft) return spans end` for a custom provider.
+Each span uses zero-based byte `row`, `col`, `end_col`, `hl_group` and optional
+`priority`; inline diff emphasis remains above these decorations.
 Native rendering preserves delta's visual conventions rather than interpreting
 delta themes or arguments. Use `native.file_header = false` for compact undo
 and LSP previews. Delta options apply only to `backend = "delta"`.
 
 Native previews are limited to 10,000 patch lines / 1 MiB and visibly indicate
-truncation (`metadata.truncated = true`). Syntax work is capped at 128 snippets,
+truncation (`metadata.truncated = true`). Syntax work is capped at 128 documents/snippets,
 200 KB and 30,000 highlight spans; inline matching is bounded to replacement
 blocks of 32 lines per side and lines of 4 KB. Larger changes retain line-level
 backgrounds. This backend currently renders unified diffs; delta remains an

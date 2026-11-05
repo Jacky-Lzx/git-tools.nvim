@@ -29,6 +29,7 @@ function M.patch(task, item, callback)
     "--no-ext-diff",
     "--no-textconv",
     "--no-color",
+    "--full-index",
     item.sha,
     "--",
   }, function(err, output)

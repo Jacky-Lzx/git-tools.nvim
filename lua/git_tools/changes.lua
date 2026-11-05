@@ -15,8 +15,13 @@ function M.split(item, lines)
     local target = #group.hunks == 0 and group.header or group.hunks[#group.hunks]
     target[#target + 1] = line
   end
-  local items = {}
+  local items, source_index = {}, 0
   for group_index, section in ipairs(groups) do
+    for _, line in ipairs(section.header) do
+      if line:match("^%+%+%+ ") then
+        source_index = source_index + 1
+      end
+    end
     if #section.hunks == 0 then
       items[#items + 1] = vim.tbl_extend(
         "force",
@@ -27,6 +32,7 @@ function M.split(item, lines)
     else
       for index, body in ipairs(section.hunks) do
         local entry = vim.tbl_extend("force", {}, item)
+        entry.sources = item.sources and { item.sources[source_index] } or nil
         entry.hunk, entry.patch_group, entry.header, entry.body = index, group_index, section.header, body
         entry.lnum = math.max(1, tonumber(body[1]:match(" %+(%d+)")) or 1)
         for n = 2, #body do
@@ -76,12 +82,15 @@ function M.query(task, repo, opts, callback)
           callback(patch_err)
           return
         end
-        if file.kind == "conflict" then
-          items[#items + 1] = vim.tbl_extend("force", {}, file, { lines = lines })
-        else
-          vim.list_extend(items, M.split(file, lines))
-        end
-        next_file()
+        require("git_tools.diff.sources").git(task, file.root, lines, function(sources)
+          file.sources = sources
+          if file.kind == "conflict" then
+            items[#items + 1] = vim.tbl_extend("force", {}, file, { lines = lines })
+          else
+            vim.list_extend(items, M.split(file, lines))
+          end
+          next_file()
+        end)
       end)
     end
     next_file()
@@ -273,7 +282,7 @@ function M.open(opts)
     load,
     ui.preview(function(task, item, callback)
       if item.lines then
-        callback(nil, item.lines)
+        callback(nil, item.lines, item.sources)
       else
         repository.patch(task, item, callback)
       end

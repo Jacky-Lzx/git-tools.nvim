@@ -12,7 +12,7 @@ function M.resize(buf, width)
   end
 end
 
-function M.prepare(lines, opts, width)
+function M.prepare(lines, opts, width, sources)
   opts = opts or {}
   require("git_tools.diff.theme").setup()
   local limited, size, truncated = {}, 0, false
@@ -24,7 +24,7 @@ function M.prepare(lines, opts, width)
     end
     limited[#limited + 1] = line
   end
-  local model = require("git_tools.diff.model").parse(limited, opts)
+  local model = require("git_tools.diff.model").parse(limited, opts, sources)
   if truncated then
     model.rows[#model.rows + 1] = { kind = "meta", text = "… diff preview truncated (10,000 lines / 1 MiB)" }
   end
@@ -85,7 +85,7 @@ function M.prepare(lines, opts, width)
       end
     end
     if opts.syntax ~= false then
-      require("git_tools.diff.syntax").paint(buf, model.documents, opts.ft)
+      require("git_tools.diff.syntax").paint(buf, model.documents, opts)
     end
     vim.b[buf].git_tools_diff = true
     vim.b[buf].git_tools_diff_hunks = hunks

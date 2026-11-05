@@ -38,7 +38,7 @@ function M.render(ctx, lines, opts, valid)
         return true
       end
       local truncated
-      buf, truncated = renderer.prepare(lines, opts.native, width)
+      buf, truncated = renderer.prepare(lines, opts.native, width, opts.sources)
       if not current() then
         return false
       end
