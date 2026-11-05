@@ -147,8 +147,16 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     when installed. Copying code excludes gutters. Theme-tools' semantic
     palette and live updates supply colors when loaded; editor highlights
     provide standalone defaults. Resize preserves the buffer and scroll.
-    opts.native accepts line_numbers=true, file_header=true, syntax=true,
-    word_diff=true and optional ft to override patch-label filetype detection.
+    opts.native accepts layout="unified", line_numbers=true, file_header=true,
+    syntax=true, word_diff=true and optional ft for filetype detection.
+    layout="side_by_side" opts into old/new columns (left/right). Replacements
+    align; insertions/deletions have an empty opposite cell. Syntax, decorations
+    and character emphasis apply to both sides. Tabs expand independently;
+    long lines clip with an ellipsis. Resize reflows the same buffer and keeps
+    the view. Very narrow windows temporarily use unified layout. Side-by-side
+    buffer text contains both visible columns and padding; gutters are virtual.
+    Pass native={layout="side_by_side"} to Git pickers, preview_hunk() or the
+    selection adapter too. No setup or default-layout change is required.
     Set file_header=false for compact undo/LSP previews. Delta args are not
     interpreted by the native backend. opts.sources is an array of snapshots
     in ---/+++ section order, including repeated edits of one path. With these,
@@ -165,7 +173,7 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     Native previews cap input at 10,000 lines / 1 MiB and mark truncation.
     Syntax caps: 128 documents/snippets / 200 KB / 30,000 spans. Inline pairing caps:
     32 lines per side / 4 KB per line. Large changes retain line backgrounds.
-    Side-by-side layout remains available through delta.
+    Delta also supports its own side-by-side layout via args={"--side-by-side"}.
     delta accepts command="delta",
     args={} and timeout=2000. cwd is explicit and never inferred from an LSP.
     valid() is an optional additional validity check. Return handle:close()

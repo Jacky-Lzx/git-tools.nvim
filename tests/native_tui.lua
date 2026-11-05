@@ -5,6 +5,7 @@ vim.opt.rtp:prepend(root .. "/../theme-tools.nvim")
 vim.o.swapfile = false
 local api = vim.api
 local themes, diff = require("theme_tools"), require("git_tools.diff")
+local layout = vim.env.GIT_TOOLS_LAYOUT or "unified"
 local configured = vim.env.GIT_TOOLS_CONFIGURED == "1"
 if not configured then
   vim.g.mapleader = " "
@@ -49,7 +50,10 @@ local function open()
   picker = require("selection_tools").open({
     items = items,
     resume = false,
-    preview = { enabled = true, providers = { require("git_tools.integrations.selection").diff() } },
+    preview = {
+      enabled = true,
+      providers = { require("git_tools.integrations.selection").diff({ native = { layout = layout } }) },
+    },
   })
 end
 vim.keymap.set("n", "<F6>", open)

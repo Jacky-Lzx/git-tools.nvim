@@ -2,7 +2,7 @@ local M = {}
 local api = vim.api
 local ns = api.nvim_create_namespace("GitToolsDiffSyntax")
 
-function M.paint(buf, documents, opts)
+function M.paint(buf, documents, opts, project)
   opts = type(opts) == "string" and { ft = opts } or opts or {}
   local remaining, bytes = 30000, 200000
   for index, doc in ipairs(documents) do
@@ -28,6 +28,9 @@ function M.paint(buf, documents, opts)
           return
         end
         local target = doc.rows[row + 1]
+        if target and project then
+          target, first, last = project(doc, target, first, last)
+        end
         if target and last > first then
           api.nvim_buf_set_extmark(buf, ns, target - 1, first, {
             end_col = last,

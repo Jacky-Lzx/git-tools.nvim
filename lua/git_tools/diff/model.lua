@@ -38,8 +38,13 @@ function M.parse(lines, opts, sources)
   local old_line, new_line, old_left, new_left = 0, 0, 0, 0
   local deleted, added = {}, {}
   local function flush()
-    if opts.word_diff ~= false then
-      require("git_tools.diff.words").align(deleted, added)
+    if opts.word_diff ~= false or opts.layout == "side_by_side" then
+      local pairs = require("git_tools.diff.words").align(deleted, added, opts.word_diff)
+      if opts.layout == "side_by_side" then
+        for _, pair in ipairs(pairs) do
+          deleted[pair[1]].pair = added[pair[2]]
+        end
+      end
     end
     deleted, added = {}, {}
   end
@@ -97,7 +102,7 @@ function M.parse(lines, opts, sources)
       if marker ~= "+" then
         row.old = old_line
         old_line, old_left = old_line + 1, math.max(0, old_left - 1)
-        source(before, row, marker == "-")
+        source(before, row, marker == "-" or opts.layout == "side_by_side")
       end
       if marker ~= "-" then
         row.new = new_line
@@ -164,7 +169,8 @@ function M.parse(lines, opts, sources)
     local lines = source and source[doc.side]
     if lines then
       local key = doc.section .. doc.side
-      local target = full[key] or { path = doc.path, lines = lines, rows = {}, ft = source.ft, full = true }
+      local target = full[key]
+        or { path = doc.path, lines = lines, rows = {}, ft = source.ft, side = doc.side, full = true }
       full[key] = target
       for i, text in ipairs(doc.lines) do
         local number = doc.numbers[i]

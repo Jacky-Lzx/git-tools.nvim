@@ -64,15 +64,22 @@ end
 
 -- Monotone alignment avoids pairing every deletion with the same-position
 -- insertion when a replacement block also inserts or removes complete lines.
-function M.align(deleted, added)
+function M.align(deleted, added, emphasis)
+  local pairs = {}
+  local function pair(i, j)
+    table.insert(pairs, 1, { i, j })
+    if emphasis ~= false then
+      deleted[i].emphasis, added[j].emphasis = M.ranges(deleted[i].text, added[j].text)
+    end
+  end
   -- A single replacement has no competing line pairing. Token overlap can be
   -- zero for a renamed identifier or punctuation-only edit; still compare chars.
   if #deleted == 1 and #added == 1 then
-    deleted[1].emphasis, added[1].emphasis = M.ranges(deleted[1].text, added[1].text)
-    return
+    pair(1, 1)
+    return pairs
   end
   if #deleted > 32 or #added > 32 then
-    return
+    return pairs
   end
   local a, b, score = {}, {}, { [0] = {} }
   for i, row in ipairs(deleted) do
@@ -97,10 +104,11 @@ function M.align(deleted, added)
     elseif score[i][j] == score[i][j - 1] then
       j = j - 1
     else
-      deleted[i].emphasis, added[j].emphasis = M.ranges(deleted[i].text, added[j].text)
+      pair(i, j)
       i, j = i - 1, j - 1
     end
   end
+  return pairs
 end
 
 return M

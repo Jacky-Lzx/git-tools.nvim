@@ -34,6 +34,7 @@ buffer tracking and the `:GitTools` command; it never installs global mappings.
 
 ```lua
 require("git_tools").status() -- native preview; backend = "delta" remains available
+require("git_tools").status({ native = { layout = "side_by_side" } }) -- optional left/right preview
 -- Optional: cwd = "/project", kind = "staged" | "unstaged" | "untracked"
 ```
 
@@ -245,6 +246,7 @@ local handle = require("git_tools.diff").render(view, patch, {
   backend = "native", -- default; "delta" or plain "vim" also available
   cwd = project_root,
   native = {
+    layout = "unified", -- default; "side_by_side" shows before/after columns
     line_numbers = true,
     file_header = true,
     syntax = true,
@@ -287,6 +289,16 @@ without text hunks use `set_lines`; `backend = "vim"` retains raw patch text.
 Frame metadata also identifies the actual `backend` (`"native"` or `"delta"`),
 including when a requested delta preview falls back to native rendering.
 
+Set `native.layout = "side_by_side"` to show the old version on the left and
+the new version on the right. This is opt-in for render calls, Git picker
+options, `preview_hunk()` and the selection adapter; the default stays
+`"unified"`. Replacement lines align across columns, with empty cells for
+insertions/deletions. Both columns retain syntax, decorations and inline diff
+emphasis. Tabs expand independently and long lines end with `…`; resizing
+reflows the same buffer and preserves its view. Very narrow previews temporarily
+use unified layout and return to columns when widened. The side-by-side buffer
+contains both visible code columns and padding; gutters remain virtual.
+
 When theme-tools is loaded, native colors subscribe to its semantic palette,
 including overrides and live theme changes. Without it, standard editor
 highlights supply the colors. Code syntax uses installed Tree-sitter parsers
@@ -318,8 +330,8 @@ Native previews are limited to 10,000 patch lines / 1 MiB and visibly indicate
 truncation (`metadata.truncated = true`). Syntax work is capped at 128 documents/snippets,
 200 KB and 30,000 highlight spans; inline matching is bounded to replacement
 blocks of 32 lines per side and lines of 4 KB. Larger changes retain line-level
-backgrounds. This backend currently renders unified diffs; delta remains an
-option for its side-by-side layout and exact syntax/theme behavior.
+backgrounds. Delta remains an option for its exact syntax/theme behavior and
+its own side-by-side layout (`delta.args = { "--side-by-side" }`).
 
 Delta receives literal argv, stdin and a bounded timeout. Paging is disabled;
 width and dark/light mode follow the preview. Missing delta, spawn errors, failure,
@@ -364,6 +376,8 @@ Install this local checkout alongside consumers until a remote release exists.
 ```sh
 sh tests/run.sh
 python3 tests/tui.py
+python3 tests/native_tui.py
+GIT_TOOLS_LAYOUT=side_by_side python3 tests/native_tui.py
 # Optional picker integration uses the sibling selection-tools.nvim checkout:
 SELECTION_TOOLS_DIR=/path/to/selection-tools.nvim sh tests/run.sh
 ```
