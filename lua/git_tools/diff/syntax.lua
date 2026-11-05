@@ -45,7 +45,9 @@ function M.paint(buf, documents, opts)
           return
         end
         parser = vim.treesitter.get_string_parser(text, lang)
-        parser:parse()
+        -- Include injected languages (Markdown inline/HTML, fenced code, etc.).
+        -- A nil range only parses the root tree on current Neovim versions.
+        parser:parse(true)
         parser:for_each_tree(function(tree, language)
           local query = vim.treesitter.query.get(language:lang(), "highlights")
           if not query then
