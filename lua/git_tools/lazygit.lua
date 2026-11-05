@@ -1,7 +1,7 @@
--- Own only the floating terminal and its job; LazyGit owns the Git interface.
+-- Own the floating terminal, session theme and job; LazyGit owns the Git interface.
 local api = vim.api
 local M = {}
-local defaults = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded" }
+local defaults = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded", theme = true }
 
 local function dimension(value, available)
   assert(
@@ -98,6 +98,9 @@ function M.open(opts)
     if self.job and not self.exited then
       pcall(vim.fn.jobstop, self.job)
     end
+    if self.theme then
+      self.theme:close()
+    end
     if self.win and api.nvim_win_is_valid(self.win) then
       pcall(api.nvim_win_close, self.win, true)
     end
@@ -168,10 +171,11 @@ function M.open(opts)
   vim.keymap.set("n", "q", function()
     session:close()
   end, { buffer = session.buf, silent = true, desc = "Close Lazygit" })
-  local argv = vim.list_extend({ opts.command }, opts.args)
+  session.theme = require("git_tools.lazygit_theme").prepare(vim.tbl_extend("force", {}, opts, { cwd = cwd }))
+  local argv = vim.list_extend({ opts.command }, session.theme and session.theme.args or opts.args)
   local started, job = pcall(vim.fn.termopen, argv, {
     cwd = cwd,
-    env = opts.env,
+    env = session.theme and session.theme.env or opts.env,
     on_exit = function(_, code)
       vim.schedule(function()
         if session.closed then
@@ -196,6 +200,9 @@ function M.open(opts)
     return failure("Unable to start Lazygit: " .. tostring(job))
   end
   session.job = job
+  if session.theme then
+    session.theme:attach(session)
+  end
   vim.bo[session.buf].filetype = "git-tools-lazygit"
   vim.cmd.startinsert()
   return session

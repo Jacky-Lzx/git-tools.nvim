@@ -30,7 +30,7 @@ local opts = {
 }
 local session = assert(tools.lazygit(opts))
 wait(function()
-  return vim.fn.filereadable(record) == 1
+  return vim.fn.filereadable(record) == 1 and #vim.fn.readfile(record) >= 3
 end)
 local lines = vim.fn.readfile(record)
 assert(lines[1] == root and lines[2] == opts.args[1] and lines[3] == opts.args[2])

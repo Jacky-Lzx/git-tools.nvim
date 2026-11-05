@@ -142,7 +142,7 @@ Git handles conflicts with existing disk changes without forcing a checkout.
 
 ```lua
 require("git_tools").lazygit()
--- Optional cwd, command, args={}, env={}, width=0.9, height=0.9, border="rounded"
+-- Optional cwd, command, args={}, env={}, width=0.9, height=0.9, border="rounded", theme=true
 -- Also available after setup(): :GitTools lazygit
 ```
 
@@ -156,7 +156,26 @@ remains visible. Resizing follows the editor, and closing refreshes file/index
 state without discarding unsaved buffers. No Snacks or picker dependency.
 Returns a session with `buf`, `win`, `job` and `:close()`/`:resize()` methods.
 `setup({ lazygit = { ... } })` optionally sets launcher defaults. Arguments use
-literal argv; the launcher inherits LazyGit's existing configuration unchanged.
+literal argv.
+
+When theme-tools is already loaded, the launcher automatically overlays the
+current semantic palette on LazyGit's existing configuration. Theme changes and
+palette overrides update the running session through LazyGit's terminal focus
+reload, preserving the process and panel state (verified with LazyGit 0.66.2).
+CLI `--use-config-file`/`-ucf`, `LG_CONFIG_FILE`, and custom config directories are
+honored; repository-local LazyGit configuration retains its normal precedence.
+The generated overlay also covers dark/light theme overrides. No user config
+file is edited, and temporary files/subscriptions are removed on close.
+
+On Unix, a session-local `delta` wrapper synchronizes diff backgrounds, word
+emphasis, line numbers and headers while retaining other renderer arguments.
+It uses the installed Catppuccin/Dracula syntax theme when available, with ANSI/none
+fallbacks for other themes. It applies to renderer commands that resolve `delta`
+through `PATH`; absolute delta paths and other renderers are left alone.
+Explicit delta color arguments are replaced by the current theme's colors.
+Use `theme=false` per call or `setup({ lazygit = { theme = false } })` to keep
+LazyGit/delta's own colors. Without loaded theme-tools, launch behavior is
+unchanged and theme-tools is not loaded implicitly.
 
 ## Buffer hunks and overlay
 
@@ -403,6 +422,7 @@ Install this local checkout alongside consumers until a remote release exists.
 ```sh
 sh tests/run.sh
 python3 tests/tui.py
+nvim --headless -u NONE -n -i NONE -l tests/lazygit_theme_tui.lua
 python3 tests/native_tui.py
 GIT_TOOLS_LAYOUT=side_by_side python3 tests/native_tui.py
 GIT_TOOLS_LAYOUT=top_bottom python3 tests/native_tui.py
@@ -428,6 +448,11 @@ Set `GIT_TOOLS_CONFIG=/path/to/nvim` to exercise its git-tools keymap spec too.
 When LazyGit is installed, this TUI check also opens its real interface using an
 isolated configuration directory and verifies resize, close/reopen and quit.
 That part needs normal terminal access (`/dev/tty`).
+`tests/lazygit_theme_tui.lua` additionally checks real RGB output from LazyGit
+and delta while switching Mocha/Dracula, a light theme and semantic overrides,
+without replacing the running process or changing source/config files. It also
+needs `/dev/tty` and skips when the external tools or sibling theme-tools are
+unavailable.
 
 MIT licensed. The renderer originated in selection-tools.nvim; its MIT copyright
 notice is retained in [LICENSE](LICENSE).

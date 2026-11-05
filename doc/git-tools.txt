@@ -121,7 +121,8 @@ git_tools.stash(opts)                                *git-tools-stash*
 
 git_tools.lazygit(opts)                               *git-tools-lazygit*
     Open external LazyGit in a centered floating terminal. No Snacks required.
-    Defaults: command="lazygit", args={}, width=0.9, height=0.9, border="rounded".
+    Defaults: command="lazygit", args={}, width=0.9, height=0.9, border="rounded",
+    theme=true.
     Width/height accept fractions or cell counts. Optional cwd/env; default cwd
     is current file's directory, then editor cwd. Repeated calls focus the
     existing session. C-g closes in terminal/Normal mode; Normal q also closes.
@@ -129,6 +130,19 @@ git_tools.lazygit(opts)                               *git-tools-lazygit*
     Successful exit closes automatically; failures retain output. Original
     buffers are preserved and file/index state refreshed. Returns session with
     buf/win/job and :close()/:resize(). setup({lazygit={...}}) sets defaults.
+
+    With theme-tools already loaded, overlays its current palette on existing
+    LazyGit config. Theme/palette changes reload through terminal focus events
+    without restarting the process (verified with LazyGit 0.66.2). Honors CLI
+    config file lists/directories and LG_CONFIG_FILE. Repository-local config
+    keeps normal precedence. User config files are not edited; generated files
+    and theme subscriptions are cleaned up on close. theme=false opts out.
+    Without loaded theme-tools, launch behavior remains unchanged.
+
+    On Unix, a session-local PATH wrapper recolors delta's backgrounds, emphasis,
+    line numbers and headers, replacing explicit color arguments but preserving
+    other renderer options. Uses installed Catppuccin/Dracula syntax themes, then
+    ANSI/none fallbacks. Absolute delta paths and other renderers are unchanged.
 
 diff.unified(before, after, opts)                      *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.
