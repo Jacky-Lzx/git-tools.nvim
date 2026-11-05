@@ -114,7 +114,7 @@ for _, layout in ipairs({ "unified", "top_bottom", "side_by_side" }) do
   assert(vim.wo[win].wrap == (layout ~= "side_by_side"))
   local stale = toggle(buf)
   assert(not vim.wo[win].wrap)
-  toggle(buf)
+  assert(handle:toggle_wrap(), "Host actions toggle the same wrap state")
   handle:resize()
   assert(api.nvim_win_get_buf(win) == buf and vim.wo[win].wrap == (layout ~= "side_by_side"))
   handle:close()

@@ -100,6 +100,9 @@ vim.keymap.set({ "n", "i" }, "<F12>", function()
       native = vim.b[buf].git_tools_diff == true,
       layout = vim.b[buf].git_tools_diff_layout or "unified",
       focus = api.nvim_get_current_win() == picker.input_win,
+      wrap = picker.git_tools_diff_wrap == true,
+      window_wrap = vim.wo[picker.preview_win].wrap,
+      compare = picker.opts.compare,
       width = api.nvim_win_get_width(picker.preview_win),
       height = api.nvim_win_get_height(picker.preview_win),
       topline = api.nvim_win_call(picker.preview_win, function()

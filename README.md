@@ -267,6 +267,7 @@ local handle = require("git_tools.diff").render(view, patch, {
   delta = { command = "delta", args = {}, timeout = 2000 },
 })
 -- handle:resize() renders again using the preview's current width.
+-- handle:toggle_wrap() toggles wrap from a host action and returns its state.
 -- handle:close() cancels work; the host releases adopted buffers.
 ```
 

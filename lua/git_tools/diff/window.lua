@@ -40,6 +40,7 @@ function M.attach(ctx, opts)
     end
     state:apply()
   end
+  state.toggle = toggle
   local function bind(buf, mode)
     if not buf or not api.nvim_buf_is_valid(buf) then
       return

@@ -131,10 +131,27 @@ with tempfile.TemporaryDirectory(prefix="native-diff-tui-") as temporary:
         closed = snapshot(lambda v: not v.get("picker") and v["origin"], "Closing did not restore source focus")
         assert closed["native_buffers"] == 0
         send(" su")  # actual configured undo mapping
+        if configured:
+            drain(6)  # Let unrelated toolchain startup notifications expire.
         snapshot(lambda v: v.get("picker", {}).get("focus"), "Undo picker did not open")
         send("\x1b[A" if configured else "\x1b[B")
         undo = snapshot(ready, "Undo mapping did not use the native backend")
         assert "local value" in undo["picker"]["screen"], json.dumps(undo["picker"], ensure_ascii=False)
+        send("\x1bz")  # Alt+Z from undo input in Insert mode
+        wrapped = snapshot(lambda v: ready(v) and v["picker"]["wrap"], "Undo Alt+Z did not enable wrapping")
+        assert wrapped["picker"]["window_wrap"] and wrapped["picker"]["query"] == ""
+        send("\x1bOS")  # F4: compare with current snapshot
+        snapshot(lambda v: ready(v) and v["picker"].get("compare") == "current" and v["picker"]["wrap"], "F4 lost undo wrapping")
+        send("\x1bz")
+        snapshot(lambda v: ready(v) and not v["picker"]["wrap"], "Undo Alt+Z did not disable wrapping")
+        send("\x1bOS")
+        snapshot(lambda v: ready(v) and v["picker"].get("compare") == "parent", "Undo parent comparison did not return")
+        send("#0")  # Root has a snapshot rather than a diff renderer.
+        snapshot(lambda v: v.get("picker", {}).get("lines") == ["Initial state (no parent change)"], "Initial undo snapshot did not appear")
+        send("\x1bz")
+        snapshot(lambda v: v.get("picker", {}).get("window_wrap") and v["picker"]["focus"] and v["mode"] == "i", "Alt+Z did not work on the initial snapshot")
+        send("\x1bOS")
+        snapshot(lambda v: ready(v) and v["picker"].get("compare") == "current" and v["picker"]["wrap"], "Snapshot-to-diff switch lost wrap")
         send("\x03")
         snapshot(lambda v: not v.get("picker") and v["origin"] and v["native_buffers"] == 0, "Undo close leaked a frame")
         assert len(transcript) > 500

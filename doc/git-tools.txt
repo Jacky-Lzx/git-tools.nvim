@@ -146,7 +146,8 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     the host on replacement, rejection or close. Calls use the main thread.
     opts.backend is "native" (default), plain "vim" or "delta".
     opts.wrap defaults to false (or setup({diff={wrap=true}})). Alt+Z toggles
-    wrap in the diff buffer and a selection-tools picker's input/list (i/n).
+    wrap; handle:toggle_wrap() exposes the same action to host controls.
+    Available in the diff buffer and a selection-tools picker's input/list (i/n).
     It retains focus, query and selection, persists across picker items and
     resize, and releases local mappings/restores window wrap on close.
     Native renders ordinary read-only buffers with virtual line numbers and

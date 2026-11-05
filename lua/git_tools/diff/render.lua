@@ -23,6 +23,11 @@ function M.render(ctx, lines, opts, valid)
     if current() then
       ctx.set_lines(lines, "diff", opts.title or "Preview")
       display:apply()
+      vim.schedule(function()
+        if current() then
+          display:apply()
+        end
+      end)
     end
   end
   local function native()
@@ -228,6 +233,10 @@ function M.render(ctx, lines, opts, valid)
   end
   function handle:resize()
     draw()
+  end
+  function handle:toggle_wrap()
+    display:toggle()
+    return display.wrap
   end
   draw()
   return handle
