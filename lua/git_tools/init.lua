@@ -20,6 +20,7 @@ end
 
 function M.setup(opts)
   opts = opts or {}
+  require("git_tools.diff.window").configure(opts.diff or {})
   if opts.lazygit then
     require("git_tools.lazygit").configure(opts.lazygit)
   end

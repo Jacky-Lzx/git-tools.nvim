@@ -20,6 +20,12 @@ function M.resize(buf, width)
   end
 end
 
+function M.set_wrap(buf, wrap, width)
+  if vim.b[buf].git_tools_diff_layout == "side_by_side" then
+    require("git_tools.diff.side_by_side").set_wrap(buf, wrap, width)
+  end
+end
+
 -- Also used when a side-by-side frame temporarily becomes too narrow.
 function M.paint(buf, model, opts, width)
   vim.bo[buf].modifiable = true

@@ -207,7 +207,7 @@ function M.select()
 end
 
 function M.preview(opts)
-  opts = opts or {}
+  opts = require("git_tools.diff.window").options(opts)
   buffer.ready(opts.buf, function(err, s)
     if err then
       git.notify(err)
@@ -224,9 +224,11 @@ function M.preview(opts)
       ft = vim.bo[s.buf].filetype,
     })
     local width = math.max(1, math.min(100, vim.o.columns - 4))
-    local buf = require("git_tools.diff.native").prepare(lines, opts.native, width, { source })
+    local native = require("git_tools.diff.native")
+    local buf =
+      native.prepare(lines, vim.tbl_extend("force", {}, opts.native or {}, { wrap = opts.wrap }), width, { source })
     vim.bo[buf].bufhidden = "wipe"
-    api.nvim_open_win(buf, true, {
+    local win = api.nvim_open_win(buf, true, {
       relative = "cursor",
       row = 1,
       col = 0,
@@ -234,6 +236,18 @@ function M.preview(opts)
       height = math.max(1, math.min(api.nvim_buf_line_count(buf), math.floor(vim.o.lines * 0.6))),
       style = "minimal",
       border = "rounded",
+    })
+    local display = require("git_tools.diff.window").attach({ win = win }, opts)
+    display.changed = function(wrap)
+      native.set_wrap(buf, wrap, api.nvim_win_get_width(win))
+    end
+    display:apply()
+    api.nvim_create_autocmd("WinClosed", {
+      pattern = tostring(win),
+      once = true,
+      callback = function()
+        display:close()
+      end,
     })
     vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf })
     vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buffer = buf })

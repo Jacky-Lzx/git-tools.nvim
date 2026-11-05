@@ -2,7 +2,9 @@ local M = {}
 
 -- Render already-computed unified diffs. Edit semantics stay with the caller.
 function M.render(ctx, lines, opts, valid)
-  opts = opts or {}
+  local window = require("git_tools.diff.window")
+  opts = window.options(opts)
+  local display = window.attach(ctx, opts)
   local delta = vim.tbl_extend("force", { command = "delta", args = {}, timeout = 2000 }, opts.delta or {})
   local cancelled, process, generation, pending = false, nil, 0, nil
   local native_buf
@@ -16,9 +18,11 @@ function M.render(ctx, lines, opts, valid)
   local function current()
     return not cancelled and not ctx.is_cancelled() and (not valid or valid())
   end
+  display.valid = current
   local function plain()
     if current() then
       ctx.set_lines(lines, "diff", opts.title or "Preview")
+      display:apply()
     end
   end
   local function native()
@@ -38,7 +42,12 @@ function M.render(ctx, lines, opts, valid)
         return true
       end
       local truncated
-      buf, truncated = renderer.prepare(lines, opts.native, width, opts.sources)
+      buf, truncated = renderer.prepare(
+        lines,
+        vim.tbl_extend("force", {}, opts.native or {}, { wrap = display.wrap }),
+        width,
+        opts.sources
+      )
       if not current() then
         return false
       end
@@ -49,6 +58,7 @@ function M.render(ctx, lines, opts, valid)
     end)
     if ok and adopted then
       native_buf = buf or native_buf
+      display:apply()
     else
       if buf and vim.api.nvim_buf_is_valid(buf) then
         vim.api.nvim_buf_delete(buf, { force = true })
@@ -147,7 +157,9 @@ function M.render(ctx, lines, opts, valid)
           local ok, adopted =
             pcall(ctx.set_buffer, frame.buf, { owned = true, backend = "delta", title = "Preview · delta" })
           release(frame, ok and adopted)
-          if not ok or not adopted then
+          if ok and adopted then
+            display:apply()
+          else
             native()
           end
         end
@@ -204,9 +216,15 @@ function M.render(ctx, lines, opts, valid)
     end
   end
   local handle = {}
+  display.changed = function(wrap)
+    if native_buf and vim.api.nvim_buf_is_valid(native_buf) then
+      require("git_tools.diff.native").set_wrap(native_buf, wrap, vim.api.nvim_win_get_width(ctx.win))
+    end
+  end
   function handle:close()
     cancelled = true
     stop()
+    display:close()
   end
   function handle:resize()
     draw()

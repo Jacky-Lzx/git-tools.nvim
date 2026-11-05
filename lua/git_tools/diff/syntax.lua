@@ -31,14 +31,17 @@ function M.paint(buf, documents, opts, project)
         if target and project then
           target, first, last = project(doc, target, first, last)
         end
-        if target and last > first then
-          api.nvim_buf_set_extmark(buf, ns, target - 1, first, {
-            end_col = last,
-            hl_group = group,
-            -- Inline change emphasis always remains above source decorations.
-            priority = math.min(149, priority),
-          })
-          remaining = remaining - 1
+        local targets = type(target) == "table" and target or target and { { target, first, last } } or {}
+        for _, span in ipairs(targets) do
+          if remaining > 0 and span[3] > span[2] then
+            api.nvim_buf_set_extmark(buf, ns, span[1] - 1, span[2], {
+              end_col = span[3],
+              hl_group = group,
+              -- Inline change emphasis always remains above source decorations.
+              priority = math.min(149, priority),
+            })
+            remaining = remaining - 1
+          end
         end
       end
       local parser

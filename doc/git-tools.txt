@@ -87,6 +87,9 @@ git_tools.compare(opts) / toggle_compare(opts)        *git-tools-compare*
     selects the current file. Return view:select(index), :refresh(), :close().
     Panel: Enter selects, R refreshes; panes: <leader>gp returns to panel;
     q closes. Working buffers and unsaved edits are retained on close.
+    wrap=true enables wrapping; Alt+Z toggles all comparison/merge panes.
+    setup({diff={wrap=true}}) sets the default; per-call wrap=false overrides it.
+    The toggle persists across file changes and refreshes until the view closes.
     Revision/index snapshots are read-only. History picker C-d opens a commit.
 
 git_tools.merge(opts)                                *git-tools-merge*
@@ -142,6 +145,10 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     false for an obsolete frame. Adopted owned=true frames must be deleted by
     the host on replacement, rejection or close. Calls use the main thread.
     opts.backend is "native" (default), plain "vim" or "delta".
+    opts.wrap defaults to false (or setup({diff={wrap=true}})). Alt+Z toggles
+    wrap in the diff buffer and a selection-tools picker's input/list (i/n).
+    It retains focus, query and selection, persists across picker items and
+    resize, and releases local mappings/restores window wrap on close.
     Native renders ordinary read-only buffers with virtual line numbers and
     +/- markers, line backgrounds, UTF-8 inline changes and Tree-sitter syntax
     when installed. Copying code excludes gutters. Theme-tools' semantic
@@ -157,6 +164,9 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     buffer text contains both visible columns and padding; gutters are virtual.
     Pass native={layout="side_by_side"} to Git pickers, preview_hunk() or the
     selection adapter too. No setup or default-layout change is required.
+    With wrap=true each column wraps independently instead of clipping;
+    continuation rows retain syntax/word highlights and omit line numbers.
+    Wrapped columns are limited to 10,000 rendered rows plus a truncation notice.
     layout="top_bottom" stacks the complete old hunk above the new hunk,
     with Before/After headings, separate context and single-column line
     numbers. Empty sides show (empty). Both blocks retain full code lines,
@@ -180,6 +190,8 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     Syntax caps: 128 documents/snippets / 200 KB / 30,000 spans. Inline pairing caps:
     32 lines per side / 4 KB per line. Large changes retain line backgrounds.
     Delta also supports its own side-by-side layout via args={"--side-by-side"}.
+    Wrap cannot recover text already clipped or broken by delta's terminal
+    output. Use the native backend for complete long-line wrapping.
     delta accepts command="delta",
     args={} and timeout=2000. cwd is explicit and never inferred from an LSP.
     valid() is an optional additional validity check. Return handle:close()

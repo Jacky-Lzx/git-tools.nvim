@@ -38,22 +38,29 @@ wait(function()
   return view.current ~= nil
 end)
 assert(view.current.kind == "staged" and text(view.windows[1]) == "base" and text(view.windows[2]) == "index")
+assert(not vim.wo[view.windows[1]].wrap and not vim.wo[view.windows[2]].wrap)
+api.nvim_set_current_win(view.windows[1])
+local wrap_mapping = vim.fn.maparg("<M-z>", "n", false, true).callback
+wrap_mapping()
+assert(vim.wo[view.windows[1]].wrap and vim.wo[view.windows[2]].wrap, "Alt+Z toggles both panes")
 view:select(2)
 wait(function()
   return view.current.kind == "unstaged"
 end)
 assert(text(view.windows[1]) == "index" and text(view.windows[2]) == "disk")
 assert(vim.wo[view.windows[1]].diff and vim.wo[view.windows[2]].diff)
+assert(vim.wo[view.windows[1]].wrap and vim.wo[view.windows[2]].wrap, "Changing files retains wrap")
 local actual = view.result
 api.nvim_buf_set_lines(actual, 0, -1, false, { "unsaved" })
 view:close()
 assert(api.nvim_buf_is_valid(actual) and vim.bo[actual].modified, "Closing diff must preserve unsaved file buffer")
 assert(vim.fn.maparg("q", "n", false, true).buffer ~= 1, "View mappings must be released")
-view = tools.compare({ cwd = root, commit = initial })
+view = tools.compare({ cwd = root, commit = initial, wrap = true })
 wait(function()
   return view.current ~= nil
 end)
 assert(text(view.windows[1]) == "" and text(view.windows[2]) == "base", "Root commit uses an empty left side")
+assert(vim.wo[view.windows[1]].wrap and vim.wo[view.windows[2]].wrap, "Explicit wrap applies after diffthis")
 view:close()
 git("add", "a.txt")
 git("commit", "-qm", "changed")
@@ -90,11 +97,19 @@ vim.fn.writefile({ "ours" }, root .. "/a.txt")
 git("add", "a.txt")
 git("commit", "-qm", "main")
 assert(command("-c", "merge.conflictstyle=diff3", "merge", "side").code ~= 0)
+tools.setup({ diff = { wrap = true }, buffer = false })
 view = tools.merge({ cwd = root })
 wait(function()
   return view.current ~= nil
 end)
 assert(#view.windows == 3 and text(view.windows[1]) == "ours" and text(view.windows[3]) == "theirs")
+for _, win in ipairs(view.windows) do
+  assert(vim.wo[win].wrap, "Configured wrap applies to all merge panes")
+end
+vim.fn.maparg("<M-z>", "n", false, true).callback()
+for _, win in ipairs(view.windows) do
+  assert(not vim.wo[win].wrap, "Merge toggle updates all panes")
+end
 local conflict = require("git_tools.conflict")
 assert(#conflict.blocks(api.nvim_buf_get_lines(view.result, 0, -1, false)) == 1)
 local rejected

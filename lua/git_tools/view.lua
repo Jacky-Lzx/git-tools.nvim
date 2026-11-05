@@ -263,6 +263,15 @@ function View:select(index)
         api.nvim_win_call(win, function()
           vim.cmd("diffthis")
         end)
+        vim.wo[win].wrap = self.wrap
+        self:map(buffers[i], "<M-z>", function()
+          self.wrap = not self.wrap
+          for _, pane in ipairs(self.windows) do
+            if api.nvim_win_is_valid(pane) then
+              vim.wo[pane].wrap = self.wrap
+            end
+          end
+        end)
         self:map(buffers[i], "q", function()
           self:close()
         end)
@@ -446,11 +455,15 @@ function View:refresh()
   end)
 end
 function M.open(opts)
-  opts = vim.tbl_extend("force", {}, opts or {})
-  local view = setmetatable(
-    { opts = opts, task = git.task(), maps = {}, items = {}, origin_tab = api.nvim_get_current_tabpage() },
-    View
-  )
+  opts = require("git_tools.diff.window").options(opts)
+  local view = setmetatable({
+    opts = opts,
+    wrap = opts.wrap,
+    task = git.task(),
+    maps = {},
+    items = {},
+    origin_tab = api.nvim_get_current_tabpage(),
+  }, View)
   M.active[view] = true
   git.discover(view.task, opts, function(err, repo)
     if err then

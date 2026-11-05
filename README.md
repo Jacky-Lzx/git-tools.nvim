@@ -30,6 +30,15 @@ Point `dir` at your checkout. Query APIs need no `setup()` call. Requiring the
 module installs no mappings, commands, autocmds or processes. `setup()` enables
 buffer tracking and the `:GitTools` command; it never installs global mappings.
 
+Diff windows default to no wrapping. Set a default with
+`require("git_tools").setup({ diff = { wrap = true } })`, or pass `wrap = true`
+to a Git picker, `compare()`, `merge()`, `preview_hunk()` or `diff.render()`.
+An explicit `wrap = false` overrides the default. **Alt+Z** toggles wrapping
+inside diff windows and from a Git picker's input/list in Insert or Normal
+mode. Comparison/merge panes toggle together. The choice lasts while the view
+is open, including file changes and resizing; a new view uses the configured
+default. Mappings are local to the diff UI and released when it closes.
+
 ## Repository changes
 
 ```lua
@@ -245,6 +254,7 @@ use it. `context` defaults to 3 and accepts a nonnegative integer.
 ```lua
 local handle = require("git_tools.diff").render(view, patch, {
   backend = "native", -- default; "delta" or plain "vim" also available
+  wrap = false, -- Alt+Z toggles; setup({ diff = { wrap = true } }) sets the default
   cwd = project_root,
   native = {
     layout = "unified", -- default; also "side_by_side" or "top_bottom"
@@ -299,6 +309,13 @@ emphasis. Tabs expand independently and long lines end with `…`; resizing
 reflows the same buffer and preserves its view. Very narrow previews temporarily
 use unified layout and return to columns when widened. The side-by-side buffer
 contains both visible code columns and padding; gutters remain virtual.
+With `wrap = true`, each column continues on additional rows instead of clipping;
+line numbers appear on the first row and syntax/inline highlights follow the
+continuations. Unified and top/bottom layouts use normal window soft wrapping
+and retain complete source lines in the buffer. Wrapped columns are capped at
+10,000 rendered rows with a truncation notice. Delta retains the line breaks
+and clipping produced by its terminal output; use native rendering for complete
+long-line wrapping.
 
 Set `native.layout = "top_bottom"` for stacked before/after blocks within each
 hunk: the complete old hunk appears above the new one, each with its own context
@@ -397,6 +414,8 @@ native/ANSI rendering, literal arguments, timeout/error fallback, cancellation,
 resize generations, and optional picker frame ownership. The rendering core
 tests do not import a picker or run Git. Picker integration uses real delta when
 installed. Consumer LSP and terminal workflows are covered in lsp-tools.nvim.
+`python3 tests/wrap_tui.py` checks real Alt+Z input in all three native layouts,
+visible wrapped text, focus, file switching, resizing and comparison panes.
 
 The Git fixture suite covers repository paths/worktrees, history/blame/links,
 partial index operations, unsaved buffers, newline preservation, external index
