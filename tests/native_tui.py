@@ -62,6 +62,10 @@ with tempfile.TemporaryDirectory(prefix="native-diff-tui-") as temporary:
         first = snapshot(ready, "Native preview did not open")
         assert "旧名字" in first["picker"]["screen"] and "新名字" in first["picker"]["screen"]
         assert "│ - local" in first["picker"]["screen"] and "│ + local" in first["picker"]["screen"]
+        for text in ('    auto("table(%d+)x(%d+)%s", {', '    auto(line_begin, {',
+                     '    }, line_begin),', '    }, "table(%d+)x(%d+)%s"),'):
+            assert text in first["picker"]["screen"], "Single replacement is not visible"
+            assert first["picker"]["emphasis"].get(text), "Single replacement lost inline emphasis"
         send("\x1b[18~")  # F7: live theme change
         themed = snapshot(lambda v: ready(v) and v["theme"] != first["theme"], "Theme did not change")
         assert themed["picker"]["buf"] == first["picker"]["buf"] and themed["add"] != first["add"]

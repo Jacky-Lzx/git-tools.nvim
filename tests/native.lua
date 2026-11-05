@@ -32,6 +32,52 @@ local a, b = words.ranges("a中x🙂b", "a文x🚀b")
 assert(#a == 2 and #b == 2, "Separate Unicode changes need separate emphasis spans")
 assert(a[1][1] == 1 and a[1][2] == 4 and a[2][1] == 5 and a[2][2] == 9)
 
+-- Single-line replacements must not depend on shared identifier tokens.
+for _, pair in ipairs({
+  { '    auto("table(%d+)x(%d+)%s", {', "    auto(line_begin, {" },
+  { "    }, line_begin),", '    }, "table(%d+)x(%d+)%s"),' },
+  { "  old_name()", "  new_name()" },
+  { "  }),", "  });" },
+  { "  旧()", "  新()" },
+}) do
+  local replacement = diff.unified({ pair[1] }, { pair[2] }, { old_path = "single.lua" })
+  local rows = model.parse(replacement).rows
+  local left, right = words.ranges(pair[1], pair[2])
+  assert(#left > 0 and #right > 0)
+  assert(
+    vim.deep_equal(rows[3].emphasis, left) and vim.deep_equal(rows[4].emphasis, right),
+    "Single replacements need character emphasis even without token overlap"
+  )
+  local frame = native.prepare(replacement, { syntax = false }, 80)
+  local highlighted = { delete = {}, add = {} }
+  for _, mark in
+    ipairs(api.nvim_buf_get_extmarks(frame, api.nvim_create_namespace("GitToolsDiff"), 0, -1, { details = true }))
+  do
+    local detail = mark[4]
+    local side = detail.hl_group == "GitToolsDiffDeleteText" and "delete"
+      or detail.hl_group == "GitToolsDiffAddText" and "add"
+    if side then
+      table.insert(highlighted[side], { mark[3], detail.end_col })
+    end
+  end
+  assert(
+    vim.deep_equal(highlighted.delete, left) and vim.deep_equal(highlighted.add, right),
+    "Native frames must paint both sides of a single replacement"
+  )
+  api.nvim_buf_delete(frame, { force = true })
+  local disabled = model.parse(replacement, { word_diff = false }).rows
+  assert(not disabled[3].emphasis and not disabled[4].emphasis, "word_diff=false must suppress emphasis")
+end
+for _, pair in ipairs({ { {}, { "inserted" } }, { { "deleted" }, {} } }) do
+  local rows = model.parse(diff.unified(pair[1], pair[2])).rows
+  for _, row in ipairs(rows) do
+    assert(not row.emphasis, "Pure insertion/deletion must retain line-only highlights")
+  end
+end
+local oversized = { { text = string.rep("a", 4097) } }
+words.align(oversized, { { text = "b" } })
+assert(vim.deep_equal(oversized[1].emphasis, {}), "Single replacements must retain the character diff limit")
+
 local special = model.parse({
   'diff --git "a/\\344\\270\\255.lua" "b/\\344\\270\\255.lua"',
   "index 123..456 100644",

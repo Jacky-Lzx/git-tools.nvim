@@ -25,11 +25,25 @@ local function open()
   for _, name in ipairs({ "alpha", "beta", "gamma" }) do
     items[#items + 1] = {
       text = name,
-      lines = diff.unified(
-        { 'local title = "旧名字"', "local count = 12", "return title, count" },
-        { 'local title = "新名字"', "local count = 34", "return title, count -- " .. name },
-        { old_path = "sample.lua" }
-      ),
+      lines = diff.unified({
+        'local title = "旧名字"',
+        "",
+        '    auto("table(%d+)x(%d+)%s", {',
+        "",
+        "    }, line_begin),",
+        "",
+        "local count = 12",
+        "return title, count",
+      }, {
+        'local title = "新名字"',
+        "",
+        "    auto(line_begin, {",
+        "",
+        '    }, "table(%d+)x(%d+)%s"),',
+        "",
+        "local count = 34",
+        "return title, count -- " .. name,
+      }, { old_path = "sample.lua" }),
     }
   end
   picker = require("selection_tools").open({
@@ -82,6 +96,15 @@ vim.keymap.set({ "n", "i" }, "<F12>", function()
       focus = api.nvim_get_current_win() == picker.input_win,
       width = api.nvim_win_get_width(picker.preview_win),
     }
+    result.picker.emphasis = {}
+    for _, mark in
+      ipairs(api.nvim_buf_get_extmarks(buf, api.nvim_create_namespace("GitToolsDiff"), 0, -1, { details = true }))
+    do
+      if (mark[4].hl_group or ""):match("Text$") then
+        local text = result.picker.lines[mark[2] + 1]
+        result.picker.emphasis[text] = true
+      end
+    end
     vim.cmd.redraw()
     local top, left = unpack(api.nvim_win_get_position(picker.preview_win))
     local screen = {}
