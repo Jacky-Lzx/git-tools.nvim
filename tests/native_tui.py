@@ -13,13 +13,16 @@ import termios
 import time
 
 root = Path(__file__).resolve().parents[1]
-side_by_side = os.environ.get("GIT_TOOLS_LAYOUT") == "side_by_side"
+layout = os.environ.get("GIT_TOOLS_LAYOUT", "unified")
+side_by_side = layout == "side_by_side"
+top_bottom = layout == "top_bottom"
 configured = os.environ.get("GIT_TOOLS_CONFIGURED") == "1"
 wide_columns = 220 if configured and side_by_side else 140
+wide_rows = 52 if top_bottom else 40
 with tempfile.TemporaryDirectory(prefix="native-diff-tui-") as temporary:
     directory = Path(temporary)
     master, slave = pty.openpty()
-    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 40, wide_columns, 0, 0))
+    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", wide_rows, wide_columns, 0, 0))
     env = dict(os.environ, TERM="xterm-256color", GIT_TOOLS_ROOT=str(root),
                GIT_TOOLS_TUI_DIR=temporary, XDG_STATE_HOME=temporary + "/state",
                XDG_CACHE_HOME=temporary + "/cache", NVIM_LOG_FILE=temporary + "/nvim.log",
@@ -62,6 +65,7 @@ with tempfile.TemporaryDirectory(prefix="native-diff-tui-") as temporary:
         drain(1.5 if configured else 0.3)
         send("\x1b[17~")  # F6: native provider
         first = snapshot(ready, "Native preview did not open")
+        assert first["picker"]["layout"] == layout
         assert "旧名字" in first["picker"]["screen"] and "新名字" in first["picker"]["screen"], json.dumps(first["picker"], ensure_ascii=False)
         if side_by_side:
             title_rows = [line for line in first["picker"]["screen"].splitlines() if "旧名字" in line and "新名字" in line]
@@ -71,12 +75,34 @@ with tempfile.TemporaryDirectory(prefix="native-diff-tui-") as temporary:
                              ('    }, line_begin),', '    }, "table(%d+)x(%d+)%s"),')):
                 assert any(old in line and new in line for line in first["picker"]["lines"])
             assert sum(first["picker"]["emphasis"].values()) >= 4
+        elif top_bottom:
+            for text in ('    auto("table(%d+)x(%d+)%s", {', '    auto(line_begin, {',
+                         '    }, line_begin),', '    }, "table(%d+)x(%d+)%s"),'):
+                assert text in first["picker"]["lines"]
+                assert first["picker"]["emphasis"].get(text), "Stacked replacement lost inline emphasis"
         else:
             assert "│ - local" in first["picker"]["screen"] and "│ + local" in first["picker"]["screen"]
             for text in ('    auto("table(%d+)x(%d+)%s", {', '    auto(line_begin, {',
                          '    }, line_begin),', '    }, "table(%d+)x(%d+)%s"),'):
-                assert text in first["picker"]["screen"], "Single replacement is not visible"
+                assert text in first["picker"]["screen"], "Single replacement is not visible: " + text + "\n" + json.dumps(first["picker"], ensure_ascii=False)
                 assert first["picker"]["emphasis"].get(text), "Single replacement lost inline emphasis"
+        if top_bottom:
+            screen = first["picker"]["screen"].splitlines()
+            before_row = next(i for i, line in enumerate(screen) if "Before  " in line)
+            old_row = next(i for i, line in enumerate(screen) if "旧名字" in line)
+            after_row = next(i for i, line in enumerate(screen) if "After  " in line)
+            new_row = next(i for i, line in enumerate(screen) if "新名字" in line)
+            assert before_row < old_row < after_row < new_row, "Old/new blocks must be stacked"
+            assert not any("旧名字" in line and "新名字" in line for line in screen)
+            if first["picker"]["height"] < len(first["picker"]["lines"]) + 2:
+                send("\x04")  # C-d scrolls the preview while retaining input focus.
+                scrolled = snapshot(lambda v: ready(v) and v["picker"]["topline"] > first["picker"]["topline"], "Stacked preview did not scroll")
+                assert '    }, "table(%d+)x(%d+)%s"),' in scrolled["picker"]["screen"]
+                assert scrolled["picker"]["buf"] == first["picker"]["buf"]
+                send("\x15\x15")  # C-u restores the top block.
+                snapshot(lambda v: ready(v) and v["picker"]["topline"] == first["picker"]["topline"], "Top block did not return")
+            else:
+                assert "return title, count -- " + first["picker"]["selected"] in first["picker"]["screen"]
         send("\x1b[18~")  # F7: live theme change
         themed = snapshot(lambda v: ready(v) and v["theme"] != first["theme"], "Theme did not change")
         assert themed["picker"]["buf"] == first["picker"]["buf"] and themed["add"] != first["add"]
@@ -92,7 +118,7 @@ with tempfile.TemporaryDirectory(prefix="native-diff-tui-") as temporary:
             title_rows = [line for line in resized["picker"]["screen"].splitlines() if "- loc" in line]
             assert title_rows and "+ loc" in title_rows[0], json.dumps(resized["picker"], ensure_ascii=False)
             assert "…" in resized["picker"]["screen"], "Narrow columns must clip long lines visibly"
-            fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 40, wide_columns, 0, 0))
+            fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", wide_rows, wide_columns, 0, 0))
             os.kill(child.pid, signal.SIGWINCH)
             restored = snapshot(lambda v: ready(v) and v["picker"]["width"] == moved["picker"]["width"], "Widening did not restore columns")
             assert restored["picker"]["buf"] == moved["picker"]["buf"]
@@ -112,7 +138,7 @@ with tempfile.TemporaryDirectory(prefix="native-diff-tui-") as temporary:
         send("\x03")
         snapshot(lambda v: not v.get("picker") and v["origin"] and v["native_buffers"] == 0, "Undo close leaked a frame")
         assert len(transcript) > 500
-        print("Native diff TUI" + (" (side-by-side)" if side_by_side else "") + (" (configured)" if configured else "") + ": visible gutters/code, live themes, rapid switching, resize, filters, undo and cleanup passed")
+        print("Native diff TUI" + (" (" + layout + ")" if layout != "unified" else "") + (" (configured)" if configured else "") + ": visible gutters/code, live themes, rapid switching, resize, filters, undo and cleanup passed")
     finally:
         send("\x1b:qa!\r")
         try:

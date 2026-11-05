@@ -35,6 +35,7 @@ buffer tracking and the `:GitTools` command; it never installs global mappings.
 ```lua
 require("git_tools").status() -- native preview; backend = "delta" remains available
 require("git_tools").status({ native = { layout = "side_by_side" } }) -- optional left/right preview
+require("git_tools").status({ native = { layout = "top_bottom" } }) -- optional before/after blocks
 -- Optional: cwd = "/project", kind = "staged" | "unstaged" | "untracked"
 ```
 
@@ -246,7 +247,7 @@ local handle = require("git_tools.diff").render(view, patch, {
   backend = "native", -- default; "delta" or plain "vim" also available
   cwd = project_root,
   native = {
-    layout = "unified", -- default; "side_by_side" shows before/after columns
+    layout = "unified", -- default; also "side_by_side" or "top_bottom"
     line_numbers = true,
     file_header = true,
     syntax = true,
@@ -298,6 +299,14 @@ emphasis. Tabs expand independently and long lines end with `…`; resizing
 reflows the same buffer and preserves its view. Very narrow previews temporarily
 use unified layout and return to columns when widened. The side-by-side buffer
 contains both visible code columns and padding; gutters remain virtual.
+
+Set `native.layout = "top_bottom"` for stacked before/after blocks within each
+hunk: the complete old hunk appears above the new one, each with its own context
+and line numbers. `Before` / `After` headings separate the blocks, and an empty
+side shows `(empty)`. Both blocks retain full code lines, syntax, decorations
+and inline emphasis; copying a code line excludes gutters. This layout uses
+the same host buffer and resize/ownership contract, and is available through
+the same render, picker, hunk-preview and selection-adapter options.
 
 When theme-tools is loaded, native colors subscribe to its semantic palette,
 including overrides and live theme changes. Without it, standard editor
@@ -378,6 +387,7 @@ sh tests/run.sh
 python3 tests/tui.py
 python3 tests/native_tui.py
 GIT_TOOLS_LAYOUT=side_by_side python3 tests/native_tui.py
+GIT_TOOLS_LAYOUT=top_bottom python3 tests/native_tui.py
 # Optional picker integration uses the sibling selection-tools.nvim checkout:
 SELECTION_TOOLS_DIR=/path/to/selection-tools.nvim sh tests/run.sh
 ```

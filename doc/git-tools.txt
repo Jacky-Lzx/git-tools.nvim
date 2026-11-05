@@ -157,6 +157,12 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     buffer text contains both visible columns and padding; gutters are virtual.
     Pass native={layout="side_by_side"} to Git pickers, preview_hunk() or the
     selection adapter too. No setup or default-layout change is required.
+    layout="top_bottom" stacks the complete old hunk above the new hunk,
+    with Before/After headings, separate context and single-column line
+    numbers. Empty sides show (empty). Both blocks retain full code lines,
+    syntax, decorations and inline emphasis. Gutters remain virtual and resize
+    preserves the same buffer and scroll. Available through the same render,
+    picker, preview_hunk() and selection-adapter options; default stays unified.
     Set file_header=false for compact undo/LSP previews. Delta args are not
     interpreted by the native backend. opts.sources is an array of snapshots
     in ---/+++ section order, including repeated edits of one path. With these,

@@ -50,6 +50,7 @@ local function open()
   picker = require("selection_tools").open({
     items = items,
     resume = false,
+    keys = layout == "top_bottom" and { preview_down = { "<C-d>" }, preview_up = { "<C-u>" } } or nil,
     preview = {
       enabled = true,
       providers = { require("git_tools.integrations.selection").diff({ native = { layout = layout } }) },
@@ -97,8 +98,13 @@ vim.keymap.set({ "n", "i" }, "<F12>", function()
       lines = api.nvim_buf_get_lines(buf, 0, -1, false),
       buf = buf,
       native = vim.b[buf].git_tools_diff == true,
+      layout = vim.b[buf].git_tools_diff_layout or "unified",
       focus = api.nvim_get_current_win() == picker.input_win,
       width = api.nvim_win_get_width(picker.preview_win),
+      height = api.nvim_win_get_height(picker.preview_win),
+      topline = api.nvim_win_call(picker.preview_win, function()
+        return vim.fn.winsaveview().topline
+      end),
     }
     result.picker.emphasis = {}
     for _, mark in

@@ -102,7 +102,7 @@ function M.parse(lines, opts, sources)
       if marker ~= "+" then
         row.old = old_line
         old_line, old_left = old_line + 1, math.max(0, old_left - 1)
-        source(before, row, marker == "-" or opts.layout == "side_by_side")
+        source(before, row, marker == "-" or opts.layout == "side_by_side" or opts.layout == "top_bottom")
       end
       if marker ~= "-" then
         row.new = new_line

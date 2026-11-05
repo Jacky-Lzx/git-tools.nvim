@@ -58,12 +58,19 @@ function M.paint(buf, model, opts, width)
         local function number(value)
           return string.rep(" ", digits - #(value and tostring(value) or "")) .. (value or "")
         end
-        gutter = {
-          { number(row.old), row.kind == "delete" and "GitToolsDiffDeleteNumber" or "GitToolsDiffNumber" },
-          { " ", "GitToolsDiffNumber" },
-          { number(row.new), row.kind == "add" and "GitToolsDiffAddNumber" or "GitToolsDiffNumber" },
-          { " │ ", "GitToolsDiffBorder" },
-        }
+        if opts.layout == "top_bottom" then
+          gutter = {
+            { number(row.old or row.new), changed and "GitToolsDiff" .. kind .. "Number" or "GitToolsDiffNumber" },
+            { " │ ", "GitToolsDiffBorder" },
+          }
+        else
+          gutter = {
+            { number(row.old), row.kind == "delete" and "GitToolsDiffDeleteNumber" or "GitToolsDiffNumber" },
+            { " ", "GitToolsDiffNumber" },
+            { number(row.new), row.kind == "add" and "GitToolsDiffAddNumber" or "GitToolsDiffNumber" },
+            { " │ ", "GitToolsDiffBorder" },
+          }
+        end
       end
       gutter[#gutter + 1] = {
         row.kind == "add" and "+ " or row.kind == "delete" and "- " or "  ",
@@ -106,10 +113,14 @@ function M.prepare(lines, opts, width, sources)
   if opts.layout == "side_by_side" then
     return require("git_tools.diff.side_by_side").prepare(model, opts, width), truncated
   end
+  if opts.layout == "top_bottom" then
+    model = require("git_tools.diff.top_bottom").layout(model)
+  end
   local buf = api.nvim_create_buf(false, true)
   local ok, err = pcall(function()
     vim.bo[buf].bufhidden, vim.bo[buf].swapfile = "hide", false
     M.paint(buf, model, opts, width)
+    vim.b[buf].git_tools_diff_layout = opts.layout == "top_bottom" and "top_bottom" or "unified"
   end)
   if not ok then
     api.nvim_buf_delete(buf, { force = true })
