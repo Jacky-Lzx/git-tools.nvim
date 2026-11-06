@@ -27,7 +27,7 @@ function M.setup(opts)
   if opts.buffer ~= false then
     require("git_tools.buffer").setup(opts.buffer)
   end
-  vim.api.nvim_create_user_command("GitTools", function(command)
+  require("git_tools.user_command").create("GitTools", function(command)
     local name = command.fargs[1] or "status"
     local actions = {
       status = M.status,
