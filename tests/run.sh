@@ -3,6 +3,7 @@ set -eu
 root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 (cd "$root" && nvim --headless -u NONE -i NONE --noplugin -l tests/setup_contract.lua)
 (cd "$root" && nvim --headless -u NONE -i NONE --noplugin -l tests/command_ownership.lua)
+(cd "$root" && nvim --headless -u NONE -i NONE --noplugin -l tests/state.lua)
 export GIT_TOOLS_ROOT="$root"
 export SELECTION_TOOLS_DIR="${SELECTION_TOOLS_DIR:-$root/../selection-tools.nvim}"
 test_tmp=$(mktemp -d)

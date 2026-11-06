@@ -1,5 +1,37 @@
 -- Requiring the plugin installs no mappings, commands, UI or Git processes.
 local M = { diff = require("git_tools.diff") }
+local configured = false
+
+-- Snapshot only already-loaded providers; never start Git or create a view.
+function M.get_state(opts)
+  opts = opts or {}
+  local buf = opts.buf or vim.api.nvim_get_current_buf()
+  local win = opts.win or vim.api.nvim_get_current_win()
+  local buffers, views = package.loaded["git_tools.buffer"], package.loaded["git_tools.view"]
+  local result = { initialized = configured }
+  if buffers then
+    for _, name in ipairs({ "signs", "line_blame", "word_diff" }) do
+      result[name] = buffers.config[name] == true
+    end
+    local state = buffers.states[buf]
+    if state then
+      result.overlay = state.overlay == true
+    end
+  end
+  if configured or views then
+    result.compare = false
+    if vim.api.nvim_win_is_valid(win) then
+      local tab = vim.api.nvim_win_get_tabpage(win)
+      for view in pairs(views and views.active or {}) do
+        if view.tab == tab then
+          result.compare = true
+          break
+        end
+      end
+    end
+  end
+  return result
+end
 
 function M.lazygit(opts)
   return require("git_tools.lazygit").open(opts)
@@ -97,9 +129,11 @@ function M.setup(opts)
       }
     end,
   })
+  configured = true
 end
 
 function M.dispose()
+  configured = false
   for _, name in ipairs({ "buffer", "view", "lazygit" }) do
     local module = package.loaded["git_tools." .. name]
     if module then

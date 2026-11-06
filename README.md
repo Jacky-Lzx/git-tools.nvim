@@ -476,3 +476,9 @@ default-based options. `buffer = false` releases existing buffer observers.
 releases unchanged owned mappings/commands and resets module options. Modified
 user content is not force-closed; blocked views still release background work.
 Disposal is repeatable; explicit setup/actions can initialize again.
+
+## Read-only state
+
+`get_state({ buf = bufnr, win = winid })` returns an independent snapshot with
+`initialized`, `compare`, `overlay`, `signs`, `word_diff` and `line_blame`. Unknown
+provider/buffer fields are absent; reads never load providers, start Git or open UI.
