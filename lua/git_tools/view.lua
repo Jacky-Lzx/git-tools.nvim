@@ -86,11 +86,15 @@ end
 function View:map(buf, lhs, callback)
   self.maps[buf] = self.maps[buf] or {}
   if self.maps[buf][lhs] == nil then
-    self.maps[buf][lhs] = api.nvim_buf_call(buf, function()
-      return vim.fn.maparg(lhs, "n", false, true)
-    end)
+    self.maps[buf][lhs] =
+      { previous = api.nvim_buf_call(buf, function()
+        return vim.fn.maparg(lhs, "n", false, true)
+      end) }
   end
   vim.keymap.set("n", lhs, callback, { buffer = buf, silent = true })
+  self.maps[buf][lhs].installed = api.nvim_buf_call(buf, function()
+    return vim.fn.maparg(lhs, "n", false, true)
+  end)
 end
 function View:cleanup()
   if self.closed then
@@ -106,13 +110,16 @@ function View:cleanup()
   end
   for buf, maps in pairs(self.maps) do
     if api.nvim_buf_is_valid(buf) then
-      for lhs, previous in pairs(maps) do
-        pcall(vim.keymap.del, "n", lhs, { buffer = buf })
-        if next(previous) and previous.buffer == 1 then
-          api.nvim_buf_call(buf, function()
-            vim.fn.mapset("n", false, previous)
-          end)
-        end
+      for lhs, record in pairs(maps) do
+        api.nvim_buf_call(buf, function()
+          local current = vim.fn.maparg(lhs, "n", false, true)
+          if vim.deep_equal(current, record.installed) then
+            vim.keymap.del("n", lhs, { buffer = buf })
+            if next(record.previous) and record.previous.buffer == 1 then
+              vim.fn.mapset("n", false, record.previous)
+            end
+          end
+        end)
       end
     end
   end
@@ -540,4 +547,13 @@ function M.toggle(opts)
   end
   return M.open(opts)
 end
+function M.dispose()
+  for _, view in ipairs(vim.tbl_keys(M.active)) do
+    view:close()
+    if not view.closed then
+      view:cleanup()
+    end
+  end
+end
+
 return M

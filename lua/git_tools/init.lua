@@ -19,13 +19,20 @@ function M.merge(opts)
 end
 
 function M.setup(opts)
+  assert(opts == nil or type(opts) == "table", "git-tools.nvim: setup expects a table")
+  opts = vim.deepcopy(opts or {})
   opts = opts or {}
-  require("git_tools.diff.window").configure(opts.diff or {})
-  if opts.lazygit then
-    require("git_tools.lazygit").configure(opts.lazygit)
-  end
-  if opts.buffer ~= false then
-    require("git_tools.buffer").setup(opts.buffer)
+  local window, lazygit = require("git_tools.diff.window"), require("git_tools.lazygit")
+  local buffers = require("git_tools.buffer")
+  local diff_options = window.resolve(opts.diff or {})
+  local terminal_options = lazygit.resolve(opts.lazygit or {})
+  local buffer_options = opts.buffer ~= false and buffers.resolve(opts.buffer) or nil
+  window.configure(diff_options)
+  lazygit.configure(terminal_options)
+  if buffer_options then
+    buffers.setup(buffer_options)
+  else
+    buffers.dispose()
   end
   require("git_tools.user_command").create("GitTools", function(command)
     local name = command.fargs[1] or "status"
@@ -90,6 +97,23 @@ function M.setup(opts)
       }
     end,
   })
+end
+
+function M.dispose()
+  for _, name in ipairs({ "buffer", "view", "lazygit" }) do
+    local module = package.loaded["git_tools." .. name]
+    if module then
+      module.dispose()
+    end
+  end
+  local window = package.loaded["git_tools.diff.window"]
+  if window then
+    window.configure()
+  end
+  local commands = package.loaded["git_tools.user_command"]
+  if commands then
+    commands.delete("GitTools")
+  end
 end
 
 function M.stage_hunk(opts)

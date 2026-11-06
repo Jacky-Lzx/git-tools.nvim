@@ -2,6 +2,7 @@
 local api = vim.api
 local M = {}
 local defaults = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded", theme = true }
+local initial = vim.deepcopy(defaults)
 
 local function dimension(value, available)
   assert(
@@ -34,8 +35,32 @@ local function refresh()
   end
 end
 
+function M.resolve(opts)
+  assert(opts == nil or type(opts) == "table", "lazygit options must be a table")
+  local candidate = vim.tbl_extend("force", vim.deepcopy(initial), vim.deepcopy(opts or {}))
+  assert(type(candidate.command) == "string", "LazyGit command must be a string")
+  assert(type(candidate.args) == "table" and vim.islist(candidate.args), "LazyGit args must be a list")
+  for _, arg in ipairs(candidate.args) do
+    assert(type(arg) == "string", "LazyGit arguments must be strings")
+  end
+  dimension(candidate.width, 100)
+  dimension(candidate.height, 100)
+  return candidate
+end
+
 function M.configure(opts)
-  defaults = vim.tbl_extend("force", defaults, opts or {})
+  defaults = M.resolve(opts)
+end
+
+function M.dispose()
+  if M.current then
+    local session = M.current
+    local keep = api.nvim_buf_is_valid(session.buf)
+      and vim.bo[session.buf].buftype ~= "terminal"
+      and vim.bo[session.buf].modified
+    session:close(false, keep)
+  end
+  defaults = vim.deepcopy(initial)
 end
 
 function M.open(opts)
@@ -81,9 +106,12 @@ function M.open(opts)
   function session:resize()
     if not self.closed and api.nvim_win_is_valid(self.win) then
       api.nvim_win_set_config(self.win, geometry(opts))
+      if self.job and not self.exited then
+        pcall(vim.fn.jobresize, self.job, api.nvim_win_get_width(self.win), api.nvim_win_get_height(self.win))
+      end
     end
   end
-  function session:close(update)
+  function session:close(update, keep_buffer)
     if self.closed then
       return
     end
@@ -102,9 +130,9 @@ function M.open(opts)
       self.theme:close()
     end
     if self.win and api.nvim_win_is_valid(self.win) then
-      pcall(api.nvim_win_close, self.win, true)
+      pcall(api.nvim_win_close, self.win, not keep_buffer)
     end
-    if api.nvim_buf_is_valid(self.buf) then
+    if not keep_buffer and api.nvim_buf_is_valid(self.buf) then
       pcall(api.nvim_buf_delete, self.buf, { force = true })
     end
     if focused and api.nvim_win_is_valid(self.origin) then

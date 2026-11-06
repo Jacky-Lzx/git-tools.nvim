@@ -2,8 +2,15 @@ local M = {}
 local api = vim.api
 local defaults = { wrap = false }
 
+function M.resolve(opts)
+  assert(opts == nil or type(opts) == "table", "diff options must be a table")
+  opts = opts or {}
+  assert(opts.wrap == nil or type(opts.wrap) == "boolean", "diff.wrap must be boolean")
+  return { wrap = opts.wrap == true }
+end
+
 function M.configure(opts)
-  defaults.wrap = opts.wrap == true
+  defaults = M.resolve(opts)
 end
 
 function M.options(opts)

@@ -1,7 +1,7 @@
 local api, uv = vim.api, vim.uv
 local git, h = require("git_tools.git"), require("git_tools.hunks")
-local M =
-  { states = {}, config = { signs = false, numhl = true, word_diff = false, line_blame = false, debounce = 100 } }
+local defaults = { signs = false, numhl = true, word_diff = false, line_blame = false, debounce = 100 }
+local M = { states = {}, config = vim.deepcopy(defaults) }
 local ns = api.nvim_create_namespace("GitToolsSigns")
 local overlay_ns = api.nvim_create_namespace("GitToolsOverlay")
 local blame_ns = api.nvim_create_namespace("GitToolsBlame")
@@ -421,8 +421,33 @@ local function groups()
   end
 end
 
+function M.resolve(opts)
+  assert(opts == nil or type(opts) == "table", "buffer options must be a table")
+  local candidate = vim.tbl_extend("force", vim.deepcopy(defaults), vim.deepcopy(opts or {}))
+  for _, name in ipairs({ "signs", "numhl", "word_diff", "line_blame" }) do
+    assert(type(candidate[name]) == "boolean", name .. " must be boolean")
+  end
+  assert(
+    type(candidate.debounce) == "number" and candidate.debounce >= 0 and candidate.debounce < math.huge,
+    "debounce must be nonnegative"
+  )
+  assert(candidate.on_attach == nil or type(candidate.on_attach) == "function", "on_attach must be a function")
+  return candidate
+end
+
+function M.dispose()
+  if group then
+    api.nvim_del_augroup_by_id(group)
+    group = nil
+  end
+  for _, buf in ipairs(vim.tbl_keys(M.states)) do
+    M.detach(buf)
+  end
+  M.config = vim.deepcopy(defaults)
+end
+
 function M.setup(opts)
-  M.config = vim.tbl_extend("force", M.config, opts or {})
+  M.config = M.resolve(opts)
   if group then
     api.nvim_del_augroup_by_id(group)
   end

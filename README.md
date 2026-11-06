@@ -463,3 +463,16 @@ Commands belong to the plugin; choose global entry keys and short aliases in
 your configuration. Registration reports same-name conflicts without replacing
 user commands. Reconfiguration refreshes only commands still owned by this
 plugin, and cleanup preserves subsequent user replacements.
+
+## Setup contract
+
+`setup(nil)` uses defaults. Configuration must be a table; caller-owned tables
+are copied before use. Invalid configuration types do not replace live handlers
+or commands. Repeating setup must not accumulate automatic registrations.
+
+Setup validates buffer, diff and terminal configuration before applying fresh
+default-based options. `buffer = false` releases existing buffer observers.
+`dispose()` cancels buffer/view work, closes owned views/terminal resources,
+releases unchanged owned mappings/commands and resets module options. Modified
+user content is not force-closed; blocked views still release background work.
+Disposal is repeatable; explicit setup/actions can initialize again.
