@@ -83,7 +83,7 @@ end
 function View:alive()
   return not self.closed and (not self.tab or api.nvim_tabpage_is_valid(self.tab))
 end
-function View:map(buf, lhs, callback)
+function View:map(buf, lhs, callback, desc)
   self.maps[buf] = self.maps[buf] or {}
   if self.maps[buf][lhs] == nil then
     self.maps[buf][lhs] =
@@ -91,7 +91,7 @@ function View:map(buf, lhs, callback)
         return vim.fn.maparg(lhs, "n", false, true)
       end) }
   end
-  vim.keymap.set("n", lhs, callback, { buffer = buf, silent = true })
+  vim.keymap.set("n", lhs, callback, { buffer = buf, silent = true, desc = desc })
   self.maps[buf][lhs].installed = api.nvim_buf_call(buf, function()
     return vim.fn.maparg(lhs, "n", false, true)
   end)
@@ -166,13 +166,13 @@ function View:layout(merge)
     })
     self:map(self.panel, "q", function()
       self:close()
-    end)
+    end, "Close Git diff view")
     self:map(self.panel, "<CR>", function()
       self:select(api.nvim_win_get_cursor(self.panel_win)[1])
-    end)
+    end, "Show selected file diff")
     self:map(self.panel, "R", function()
       self:refresh()
-    end)
+    end, "Refresh Git diff view")
   end
   if self.merge ~= merge or not self.windows then
     for _, win in ipairs(self.windows or {}) do
@@ -278,13 +278,13 @@ function View:select(index)
               vim.wo[pane].wrap = self.wrap
             end
           end
-        end)
+        end, "Toggle diff wrapping")
         self:map(buffers[i], "q", function()
           self:close()
-        end)
+        end, "Close Git diff view")
         self:map(buffers[i], "<leader>gp", function()
           api.nvim_set_current_win(self.panel_win)
-        end)
+        end, "Focus Git file list")
       end
       self.current, self.result = item, right
       if merge then
@@ -292,17 +292,17 @@ function View:select(index)
         for key, kind in pairs({ co = "ours", ct = "theirs", cb = "both" }) do
           self:map(right, key, function()
             conflict.choose(kind, right)
-          end)
+          end, "Choose " .. kind .. " conflict changes")
         end
         self:map(right, "]x", function()
           conflict.nav("next")
-        end)
+        end, "Next conflict")
         self:map(right, "[x", function()
           conflict.nav("prev")
-        end)
+        end, "Previous conflict")
         self:map(right, "S", function()
           self:resolve()
-        end)
+        end, "Save and stage resolved file")
         self:map(right, "<leader>gb", function()
           M.blob(self.task, self.repo, ":1", item.path, function(base_err, text)
             if base_err then
@@ -311,7 +311,7 @@ function View:select(index)
               require("git_tools.ui").scratch(git.lines(text), "base/" .. item.path, vim.bo[right].filetype)
             end
           end)
-        end)
+        end, "Show conflict base version")
       end
       api.nvim_set_current_win(self.windows[2])
       if self.opts.on_ready then

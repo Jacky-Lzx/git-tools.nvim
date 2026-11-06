@@ -249,8 +249,8 @@ function M.preview(opts)
         display:close()
       end,
     })
-    vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf })
-    vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buffer = buf })
+    vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf, desc = "Close Git diff preview" })
+    vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buffer = buf, desc = "Close Git diff preview" })
   end)
 end
 

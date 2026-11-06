@@ -11,7 +11,7 @@ function M.scratch(lines, title, filetype)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].filetype = filetype or "diff"
   vim.bo[buf].modifiable = false
-  vim.keymap.set("n", "q", "<cmd>tabclose<cr>", { buffer = buf, silent = true })
+  vim.keymap.set("n", "q", "<cmd>tabclose<cr>", { buffer = buf, silent = true, desc = "Close Git output" })
   return buf
 end
 
