@@ -1,0 +1,60 @@
+name: Tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        neovim: [v0.10.0, v0.12.6]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          version: ${{ matrix.neovim }}
+          neovim: true
+      - uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ github.token }}
+          version: v2.6.0
+          args: --check lua tests
+      - name: Install external test tools
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+      - name: Install pinned sibling fixtures
+        run: python3 tests/run.py fixtures
+      - name: Registered runtime and UI tests
+        run: sh tests/run.sh default --locked --output "$RUNNER_TEMP/test-results"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-${{ matrix.neovim }}
+          path: ${{ runner.temp }}/test-results
+          if-no-files-found: ignore
+
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          version: v0.12.6
+          neovim: true
+      - name: Install test tools
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+      - name: Install pinned sibling fixtures
+        run: python3 tests/run.py fixtures
+      - name: Required cross-plugin workflows
+        run: sh tests/run.sh integration --locked --output "$RUNNER_TEMP/integration-results"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration
+          path: ${{ runner.temp }}/integration-results
+          if-no-files-found: ignore

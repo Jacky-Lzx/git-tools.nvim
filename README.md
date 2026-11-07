@@ -482,3 +482,5 @@ Disposal is repeatable; explicit setup/actions can initialize again.
 `get_state({ buf = bufnr, win = winid })` returns an independent snapshot with
 `initialized`, `compare`, `overlay`, `signs`, `word_diff` and `line_blame`. Unknown
 provider/buffer fields are absent; reads never load providers, start Git or open UI.
+
+[Test workflow](tests/README.md): registered suites, filtering, required fixtures and retained failure evidence.
