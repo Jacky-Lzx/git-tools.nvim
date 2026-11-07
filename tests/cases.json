@@ -627,12 +627,12 @@
   "fixtures": {
     "selection-tools.nvim": {
       "repository": "Jacky-Lzx/selection-tools.nvim",
-      "revision": "1dff1fa0efa8614e784e457c79eefd2d257ba312",
+      "revision": "b18d217b0aaa9bec2d83e95c7625ebece427066b",
       "path": "{root}/../selection-tools.nvim"
     },
     "theme-tools.nvim": {
       "repository": "Jacky-Lzx/theme-tools.nvim",
-      "revision": "6eb5fc94618dd0f8e03d97515f8852274a3e6167",
+      "revision": "ea575718d7207d06e278d5ad2ed926b2bf38573d",
       "path": "{root}/../theme-tools.nvim"
     }
   }

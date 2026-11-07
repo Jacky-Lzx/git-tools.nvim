@@ -12,7 +12,7 @@ function M.paint(buf, documents, opts, project)
     local filetype = opts.ft ~= "" and opts.ft or nil
     filetype = filetype or doc.ft ~= "" and doc.ft or nil
     filetype = filetype or doc.path and vim.filetype.match({ filename = doc.path })
-    local lang = filetype and vim.treesitter.language.get_lang(filetype)
+    local lang = filetype and (vim.treesitter.language.get_lang(filetype) or filetype)
     local size = 0
     for _, line in ipairs(doc.lines) do
       size = size + #line + 1
