@@ -1,11 +1,58 @@
-*git-tools.txt*  Reusable text diffs and preview rendering
+*git-tools.txt*	Git workflows and reusable text diff generation and rendering.
 
-API                                                  *git-tools-api*
+==============================================================================
+CONTENTS                                                           *git-tools*
 
-require("git_tools").diff and require("git_tools.diff") expose the same module.
-No setup, global mappings, commands or Git repository are required.
+  Quick start         |git-tools-quickstart|
+  Commands            |git-tools-commands|
+  Options             |git-tools-options|
+  Lua API             |git-tools-api|
+  Lifecycle           |git-tools-lifecycle|
+  Troubleshooting     |git-tools-troubleshooting|
 
-require("git_tools").status(opts)                     *git-tools-status*
+==============================================================================
+QUICK START                                             *git-tools-quickstart*
+
+Requires Neovim 0.10+. Git workflows require Git. Pickers use optional
+selection-tools.nvim; delta and Lazygit are optional.
+
+>lua
+    require("git_tools").setup({})
+<
+
+The example above selects a small working setup. Full defaults, options and
+feature contracts are documented in this reference. Public installation and
+package-manager examples are in README.md.
+
+==============================================================================
+TROUBLESHOOTING                                    *git-tools-troubleshooting*
+
+Check the minimum Neovim version and feature dependencies first. Global
+mappings shown in the README are configuration examples unless explicitly
+documented as plugin defaults. Keep one owner for each overridden UI or
+mapping.
+
+==============================================================================
+COMMANDS                                                  *git-tools-commands*
+
+:lua require("git_tools").status()
+
+See the workflow guide for usage examples and the detailed reference below for
+arguments and feature-specific commands.
+
+==============================================================================
+OPTIONS                                                    *git-tools-options*
+
+Options are passed to require("git_tools").setup(opts). The quick start is an
+example, not a dump of defaults. Detailed configuration and examples follow
+below.
+
+API                                                            *git-tools-api*
+
+require("git_tools").diff and require("git_tools.diff") expose the same
+module. No setup, global mappings, commands or Git repository are required.
+
+require("git_tools").status(opts)                           *git-tools-status*
     Open repository changes in optional selection-tools.nvim. Git required.
     opts.cwd defaults to the current file's directory, then editor cwd.
     opts.kind filters staged/unstaged/untracked/conflict; backend="delta"
@@ -17,116 +64,138 @@ require("git_tools").status(opts)                     *git-tools-status*
     Rejects incompatible selections, conflicts, stale snapshots and discarding
     unsaved buffers. Discard never deletes untracked files.
 
-git_tools.changes(opts)                               *git-tools-changes*
+git_tools.changes(opts)                                    *git-tools-changes*
     Search individual repository hunks. F4 switches files/hunks in the same
     picker; query retained. C-s stage, C-z unstage, C-r discard, F5 refresh.
     Multi-hunk changes use one ordered patch. Binary/metadata-only entries
-    support whole-file actions and must be selected separately from text hunks.
-    Confirm jumps to the first changed line, accounting for unsaved buffer text.
+    support whole-file actions and must be selected separately from text
+        hunks.
+    Confirm jumps to the first changed line, accounting for unsaved buffer
+        text.
     opts.group=true starts with files; kind filters staged/unstaged/untracked.
 
 git_tools.log(opts) / file_history(opts) / line_history(opts)
-                                                     *git-tools-history*
+                                                           *git-tools-history*
     Commit pickers with complete commit-patch previews. limit=200, optional
     cwd/rev/path. file_history follows renames; line_history uses Git -L and
     opts.range={start,end} (committed line numbers; default current line).
     Confirm opens a read-only tab; q closes it.
 
-git_tools.blame(opts, callback)                       *git-tools-blame*
+git_tools.blame(opts, callback)                              *git-tools-blame*
     Blame current line, or range={start,end}. Includes unsaved buffer text.
-    Explicit absolute path blames disk. Without callback, open a commit picker;
+    Explicit absolute path blames disk. Without callback, open a commit
+        picker;
     with callback(err,items), return structured porcelain records. Zero-object
     entries have uncommitted=true. Return a cancellable task (:close()).
 
-git_tools.browse(opts, callback)                       *git-tools-browse*
+git_tools.browse(opts, callback)                            *git-tools-browse*
     Open current tracked file at HEAD's commit. copy=true copies its URL;
     range={first,last} links lines. permalink=false uses current branch.
     commit=true or a revision string opens a commit page. Optional cwd/path,
     remote, provider, base_url, open(url), url(remote,rev,path,opts).
     Known hosts: GitHub/GitLab/Bitbucket/Codeberg. Custom hosts need provider
     or url. Optional callback(err,url) suppresses opening/copying.
-    what=repo/branch/file/commit/permalink explicitly selects a target. Default
+    what=repo/branch/file/commit/permalink explicitly selects a target.
+        Default
     auto recognizes a valid cursor commit hash, then file or repository home.
     A range takes precedence over hash recognition. branch selects a branch
     explicitly; branch pages without a branch fail on detached HEAD.
     Multiple remotes open a chooser (upstream/origin first). remote bypasses
     it; select_remote=false chooses the preferred remote. Cancel returns nil.
 
-git_tools.setup({buffer={...}})                       *git-tools-buffer*
+git_tools.setup({buffer={...}})                             *git-tools-buffer*
     Opt into automatic buffer tracking. Defaults: signs=false, numhl=true,
-    word_diff=false, line_blame=false, debounce=100 (ms). buffer=false disables
+    word_diff=false, line_blame=false, debounce=100 (ms). buffer=false
+        disables
     initial setup. No global mappings are installed.
-    Optional on_attach(buf) runs once after the first ready repository snapshot.
+    Optional on_attach(buf) runs once after the first ready repository
+        snapshot.
     nav_hunk("next"|"prev"|"first"|"last"), select_hunk(), preview_hunk(),
     toggle_overlay(buf), get_hunks(buf), toggle(name,optional_boolean).
 
 git_tools.stage_hunk(opts) / unstage_hunk(opts) / reset_hunk(opts)
-                                                     *git-tools-hunks*
+                                                             *git-tools-hunks*
     Default current hunk; range={first,last} selects buffer lines. Stage uses
     unsaved buffer text; unstage projects HEAD/index hunks back through buffer
     changes. Reset only edits the buffer and supports normal undo. *_buffer()
     methods act on all hunks. Optional buf and callback(err).
     Unequal replacements assign excess deleted lines to the final new line.
-    CRLF/index modes/newline flags are preserved. Binary/symlink/unmerged files
+    CRLF/index modes/newline flags are preserved. Binary/symlink/unmerged
+        files
     are excluded. Clean filters are not run. Index/buffer changes are checked
-    before applying a context-checked cached patch; concurrent operations fail.
+    before applying a context-checked cached patch; concurrent operations
+        fail.
     quickfix() exports current buffer hunks; quickfix({all=true}) exports disk
     and index hunks across the repository.
 
-require("git_tools.integrations.status")              *git-tools-status-ui*
+require("git_tools.integrations.status")                 *git-tools-status-ui*
     diff(): lualine source {added,modified,removed}. branch(): branch name.
     scrollbar(): register nvim-scrollbar handler after that plugin's setup.
-    User GitToolsUpdate data.buf identifies refreshed buffers; b:git_tools_status
-    stores added/changed/removed/head. Snacks Git sign patterns need "GitTools".
+    User GitToolsUpdate data.buf identifies refreshed buffers;
+        b:git_tools_status
+    stores added/changed/removed/head. Snacks Git sign patterns need
+        "GitTools".
 
-git_tools.compare(opts) / toggle_compare(opts)        *git-tools-compare*
+git_tools.compare(opts) / toggle_compare(opts)             *git-tools-compare*
     File panel and native double-column diff in an owned tab. Default lists
     staged (HEAD/index) and unstaged (index/buffer) changes. from/to select
     revisions; commit selects its first-parent patch, including root commits.
-    staged=true filters index changes; path restricts files. diffthis(revision)
+    staged=true filters index changes; path restricts files.
+        diffthis(revision)
     selects the current file. Return view:select(index), :refresh(), :close().
     Panel: Enter selects, R refreshes; panes: <leader>gp returns to panel;
     q closes. Working buffers and unsaved edits are retained on close.
     wrap=true enables wrapping; Alt+Z toggles all comparison/merge panes.
-    setup({diff={wrap=true}}) sets the default; per-call wrap=false overrides it.
-    The toggle persists across file changes and refreshes until the view closes.
+    setup({diff={wrap=true}}) sets the default; per-call wrap=false overrides
+        it.
+    The toggle persists across file changes and refreshes until the view
+        closes.
     Revision/index snapshots are read-only. History picker C-d opens a commit.
 
-git_tools.merge(opts)                                *git-tools-merge*
+git_tools.merge(opts)                                        *git-tools-merge*
     Conflicted files in three columns: ours, editable result, theirs. Result:
     ]x/[x next/previous conflict; co/ct/cb choose ours/theirs/both; <leader>gb
     opens base. S explicitly saves and stages, refusing remaining markers.
     Choosing content alone never stages. Supports diff3 conflict markers.
     Missing sides are empty; deleting a result remains an explicit Git action.
 
-:GitTools [action] [revision [revision]]               *:GitTools*
+:GitTools [action] [revision [revision]]                           *:GitTools*
     Installed by setup(). Default action: status. Also log, file_history,
-    line_history, blame, browse, compare, merge, lazygit, stage, unstage, reset and
+    line_history, blame, browse, compare, merge, lazygit, stage, unstage,
+        reset and
     *_buffer variants. compare accepts from/to; log accepts a revision.
     Ex ranges select lines for blame/history/browse/hunk operations.
 
-git_tools.branches(opts)                             *git-tools-branches*
+git_tools.branches(opts)                                  *git-tools-branches*
     Local branch picker; all=true includes remote refs. Recent commit preview.
     Enter switches (remote refs create a local tracking branch); C-a creates a
     branch at HEAD without switching; C-d confirms deleting a merged local
-    branch. F5 refreshes. start customizes creation revision. Never force-delete
-    unmerged/current/worktree/remote branches. Revalidates selected branch tips.
+    branch. F5 refreshes. start customizes creation revision. Never
+        force-delete
+    unmerged/current/worktree/remote branches. Revalidates selected branch
+        tips.
 
-git_tools.stash(opts)                                *git-tools-stash*
+git_tools.stash(opts)                                        *git-tools-stash*
     Stash list and patch preview including untracked content. Enter applies
     the selected SHA and retains the stash; index=true restores index too.
     Stale/deleted selections fail; position changes preserve object identity.
-    F5 refreshes. Conflicted applies retain both result and stash. Branch switch
-    and stash apply reject unsaved repository buffers; Git protects disk edits.
+    F5 refreshes. Conflicted applies retain both result and stash. Branch
+        switch
+    and stash apply reject unsaved repository buffers; Git protects disk
+        edits.
 
-git_tools.lazygit(opts)                               *git-tools-lazygit*
+git_tools.lazygit(opts)                                    *git-tools-lazygit*
     Open external LazyGit in a centered floating terminal. No Snacks required.
-    Defaults: command="lazygit", args={}, width=0.9, height=0.9, border="rounded",
+    Defaults: command="lazygit", args={}, width=0.9, height=0.9,
+        border="rounded",
     theme=true.
-    Width/height accept fractions or cell counts. Optional cwd/env; default cwd
+    Width/height accept fractions or cell counts. Optional cwd/env; default
+        cwd
     is current file's directory, then editor cwd. Repeated calls focus the
-    existing session. C-g closes in terminal/Normal mode; Normal q also closes.
-    Escape passes through. Closing stops the job and frees the terminal buffer.
+    existing session. C-g closes in terminal/Normal mode; Normal q also
+        closes.
+    Escape passes through. Closing stops the job and frees the terminal
+        buffer.
     Successful exit closes automatically; failures retain output. Original
     buffers are preserved and file/index state refreshed. Returns session with
     buf/win/job and :close()/:resize(). setup({lazygit={...}}) sets defaults.
@@ -139,12 +208,16 @@ git_tools.lazygit(opts)                               *git-tools-lazygit*
     and theme subscriptions are cleaned up on close. theme=false opts out.
     Without loaded theme-tools, launch behavior remains unchanged.
 
-    On Unix, a session-local PATH wrapper recolors delta's backgrounds, emphasis,
-    line numbers and headers, replacing explicit color arguments but preserving
-    other renderer options. Uses installed Catppuccin/Dracula syntax themes, then
-    ANSI/none fallbacks. Absolute delta paths and other renderers are unchanged.
+    On Unix, a session-local PATH wrapper recolors delta's backgrounds,
+        emphasis,
+    line numbers and headers, replacing explicit color arguments but
+        preserving
+    other renderer options. Uses installed Catppuccin/Dracula syntax themes,
+        then
+    ANSI/none fallbacks. Absolute delta paths and other renderers are
+        unchanged.
 
-diff.unified(before, after, opts)                      *git-tools-unified*
+diff.unified(before, after, opts)                          *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.
     Strings preserve final newlines. Lists contain terminated newline-free
     lines; {} is empty text. opts.old_path/new_path label the inputs.
@@ -153,7 +226,7 @@ diff.unified(before, after, opts)                      *git-tools-unified*
     The second result captures {before=lines, after=lines, ft=opts.ft} for
     full-document syntax in render(). Retain it with the generated patch.
 
-diff.render(view, lines, opts, valid)                  *git-tools-render*
+diff.render(view, lines, opts, valid)                       *git-tools-render*
     Render into a host-owned window. view has win, is_cancelled(),
     set_lines(lines,ft,title) and set_buffer(buf,metadata). set_buffer returns
     false for an obsolete frame. Adopted owned=true frames must be deleted by
@@ -161,7 +234,8 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     opts.backend is "native" (default), plain "vim" or "delta".
     opts.wrap defaults to false (or setup({diff={wrap=true}})). Alt+Z toggles
     wrap; handle:toggle_wrap() exposes the same action to host controls.
-    Available in the diff buffer and a selection-tools picker's input/list (i/n).
+    Available in the diff buffer and a selection-tools picker's input/list
+        (i/n).
     It retains focus, query and selection, persists across picker items and
     resize, and releases local mappings/restores window wrap on close.
     Native renders ordinary read-only buffers with virtual line numbers and
@@ -172,25 +246,30 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     opts.native accepts layout="unified", line_numbers=true, file_header=true,
     syntax=true, word_diff=true and optional ft for filetype detection.
     layout="side_by_side" opts into old/new columns (left/right). Replacements
-    align; insertions/deletions have an empty opposite cell. Syntax, decorations
+    align; insertions/deletions have an empty opposite cell. Syntax,
+        decorations
     and character emphasis apply to both sides. Tabs expand independently;
     long lines clip with an ellipsis. Resize reflows the same buffer and keeps
     the view. Very narrow windows temporarily use unified layout. Side-by-side
-    buffer text contains both visible columns and padding; gutters are virtual.
+    buffer text contains both visible columns and padding; gutters are
+        virtual.
     Pass native={layout="side_by_side"} to Git pickers, preview_hunk() or the
     selection adapter too. No setup or default-layout change is required.
     With wrap=true each column wraps independently instead of clipping;
     continuation rows retain syntax/word highlights and omit line numbers.
-    Wrapped columns are limited to 10,000 rendered rows plus a truncation notice.
+    Wrapped columns are limited to 10,000 rendered rows plus a truncation
+        notice.
     layout="top_bottom" stacks the complete old hunk above the new hunk,
     with Before/After headings, separate context and single-column line
     numbers. Empty sides show (empty). Both blocks retain full code lines,
     syntax, decorations and inline emphasis. Gutters remain virtual and resize
     preserves the same buffer and scroll. Available through the same render,
-    picker, preview_hunk() and selection-adapter options; default stays unified.
+    picker, preview_hunk() and selection-adapter options; default stays
+        unified.
     Set file_header=false for compact undo/LSP previews. Delta args are not
     interpreted by the native backend. opts.sources is an array of snapshots
-    in ---/+++ section order, including repeated edits of one path. With these,
+    in ---/+++ section order, including repeated edits of one path. With
+        these,
     syntax parses the complete document once per side and maps visible rows.
     Without them, or when visible text mismatches, syntax uses hunk snippets.
     Git pickers reconstruct full versions from the patch's base blob, never
@@ -202,9 +281,11 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     with zero-based byte row,col,end_col,hl_group and optional priority.
     Diff character emphasis remains above syntax and decorations.
     Native previews cap input at 10,000 lines / 1 MiB and mark truncation.
-    Syntax caps: 128 documents/snippets / 200 KB / 30,000 spans. Inline pairing caps:
+    Syntax caps: 128 documents/snippets / 200 KB / 30,000 spans. Inline
+        pairing caps:
     32 lines per side / 4 KB per line. Large changes retain line backgrounds.
-    Delta also supports its own side-by-side layout via args={"--side-by-side"}.
+    Delta also supports its own side-by-side layout via
+        args={"--side-by-side"}.
     Wrap cannot recover text already clipped or broken by delta's terminal
     output. Use the native backend for complete long-line wrapping.
     delta accepts command="delta",
@@ -215,10 +296,46 @@ diff.render(view, lines, opts, valid)                  *git-tools-render*
     Delta argv is literal; failures, empty output, missing executables and
     timeouts fall back to native diff. Obsolete output is discarded.
 
-require("git_tools.integrations.selection").diff(opts)  *git-tools-selection*
+require("git_tools.integrations.selection").diff(opts)   *git-tools-selection*
     Create an optional selection-tools preview provider for item.lines or
-    opts.lines(item). opts.cwd overrides item.root. Decline items without lines.
+    opts.lines(item). opts.cwd overrides item.root. Decline items without
+        lines.
     The adapter itself loads no picker. A callback owns edit validation and
     application; this provider only displays already computed diffs.
+
+==============================================================================
+COMMAND OWNERSHIP                      *git-tools-reference-command-ownership*
+
+Commands belong to the plugin; choose global entry keys and short aliases in
+your configuration. Registration reports same-name conflicts without replacing
+user commands. Reconfiguration refreshes only commands still owned by this
+plugin, and cleanup preserves subsequent user replacements.
+
+==============================================================================
+SETUP CONTRACT                                           *git-tools-lifecycle*
+                                          *git-tools-reference-setup-contract*
+
+`setup(nil)` uses defaults. Configuration must be a table; caller-owned tables
+are copied before use. Invalid configuration types do not replace live
+handlers or commands. Repeating setup must not accumulate automatic
+registrations.
+
+Setup validates buffer, diff and terminal configuration before applying fresh
+default-based options. `buffer = false` releases existing buffer observers.
+`dispose()` cancels buffer/view work, closes owned views/terminal resources,
+releases unchanged owned mappings/commands and resets module options. Modified
+user content is not force-closed; blocked views still release background work.
+Disposal is repeatable; explicit setup/actions can initialize again.
+
+==============================================================================
+READ-ONLY STATE                          *git-tools-reference-read-only-state*
+
+`get_state({ buf = bufnr, win = winid })` returns an independent snapshot with
+`initialized`, `compare`, `overlay`, `signs`, `word_diff` and `line_blame`.
+Unknown provider/buffer fields are absent; reads never load providers, start
+Git or open UI.
+
+Test workflow (tests/README.md): registered suites, filtering, required
+fixtures and retained failure evidence.
 
 vim:tw=78:ts=8:noet:ft=help:norl:
