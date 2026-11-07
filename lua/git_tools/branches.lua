@@ -186,6 +186,7 @@ function M.open(opts)
     end, opts),
     switch,
     {
+      components = require("git_tools.picker_components").for_kind("branches"),
       actions = {
         refresh = function(p)
           if repo then

@@ -1,5 +1,7 @@
 # git-tools.nvim
 
+Git pickers use selection-tools path, time and text components. Shared `component_defaults` apply; displayed dates remain searchable. `opts.picker.components` replaces the row recipe (including `{}` or `false`). An explicit `opts.picker.format_item` selects legacy formatting unless components are also supplied.
+
 Git workflows and reusable text diff generation and rendering.
 
 ## Features

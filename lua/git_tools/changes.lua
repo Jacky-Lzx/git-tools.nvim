@@ -290,6 +290,7 @@ function M.open(opts)
     M.jump,
     {
       multi = true,
+      components = require("git_tools.picker_components").for_kind("changes"),
       actions = actions,
       keys = {
         stage = { "<C-s>" },

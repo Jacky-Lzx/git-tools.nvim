@@ -96,6 +96,7 @@ function M.open(opts)
   return ui.pick(opts, "Git stash · Enter applies (keeps stash)", load, ui.preview(M.patch, opts), function(item)
     M.apply(item, opts)
   end, {
+    components = require("git_tools.picker_components").for_kind("stash"),
     actions = {
       refresh = function(p)
         if repo then

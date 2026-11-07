@@ -118,6 +118,11 @@ function M.pick(opts, title, loader, preview, on_choice, extra)
       end
     end,
   }, extra or {}, opts.picker or {})
+  if opts.picker and opts.picker.format_item and opts.picker.components == nil then
+    config.components = nil
+  elseif config.components == nil then
+    config.components = require("git_tools.picker_components").for_kind()
+  end
   return selection.open(config)
 end
 

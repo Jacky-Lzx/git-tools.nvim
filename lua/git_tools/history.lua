@@ -115,6 +115,7 @@ function M.open(opts)
     ui.preview(M.patch, opts),
     M.show,
     {
+      components = require("git_tools.picker_components").for_kind("log"),
       actions = {
         compare_commit = function(picker)
           local item = picker:current()
@@ -191,6 +192,7 @@ function M.blame(opts, callback)
       end
       selection.open({
         prompt = "Git blame",
+        components = require("git_tools.picker_components").for_kind("blame"),
         items = items,
         resume = false,
         format_item = function(entry)

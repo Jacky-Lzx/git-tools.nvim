@@ -626,6 +626,29 @@
         "path:{root}/../selection-tools.nvim/lua"
       ],
       "timeout": 120
+    },
+    {
+      "name": "picker_components",
+      "suite": "integration",
+      "command": [
+        "{nvim}",
+        "--headless",
+        "-u",
+        "NONE",
+        "-i",
+        "NONE",
+        "--noplugin",
+        "-n",
+        "-l",
+        "tests/picker_components.lua"
+      ],
+      "files": [
+        "tests/picker_components.lua"
+      ],
+      "requires": [
+        "path:{root}/../selection-tools.nvim/lua"
+      ],
+      "timeout": 90
     }
   ],
   "support": {
@@ -641,7 +664,7 @@
   "fixtures": {
     "selection-tools.nvim": {
       "repository": "Jacky-Lzx/selection-tools.nvim",
-      "revision": "b18d217b0aaa9bec2d83e95c7625ebece427066b",
+      "revision": "6685844c034e1cab37de786ebbc1d0e673a87196",
       "path": "{root}/../selection-tools.nvim"
     },
     "theme-tools.nvim": {

@@ -30,11 +30,15 @@ jobs:
         run: python3 tests/run.py fixtures
       - name: Registered runtime and UI tests
         run: sh tests/run.sh default --locked --output "$RUNNER_TEMP/test-results"
+      - name: Picker component integration
+        run: python3 tests/run.py integration --filter picker_components --locked --output "$RUNNER_TEMP/component-results"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: tests-${{ matrix.neovim }}
-          path: ${{ runner.temp }}/test-results
+          path: |
+            ${{ runner.temp }}/test-results
+            ${{ runner.temp }}/component-results
           if-no-files-found: ignore
 
   integration:
