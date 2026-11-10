@@ -4,6 +4,7 @@ if vim.fn.isdirectory(selection) == 1 then
   vim.opt.rtp:append(selection)
 end
 vim.o.swapfile, vim.o.hidden = false, true
+vim.o.mouse = "a"
 vim.g.mapleader = " "
 local tools = require("git_tools")
 if vim.env.GIT_TOOLS_CONFIG then
@@ -45,6 +46,8 @@ _G.git_tools_snapshot = function()
       running = not session.exited,
       width = vim.api.nvim_win_get_width(session.win),
       relative = vim.api.nvim_win_get_config(session.win).relative,
+      position = vim.fn.screenpos(session.win, 1, 1),
+      view = vim.fn.winsaveview(),
     }
   end
   local picker = _G.git_tools_test_picker
@@ -55,4 +58,4 @@ _G.git_tools_snapshot = function()
   end
   vim.fn.writefile({ vim.json.encode(result) }, assert(vim.env.GIT_TOOLS_TUI_STATE))
 end
-vim.keymap.set({ "n", "i" }, "<F12>", _G.git_tools_snapshot)
+vim.keymap.set({ "n", "i", "t" }, "<F12>", _G.git_tools_snapshot)

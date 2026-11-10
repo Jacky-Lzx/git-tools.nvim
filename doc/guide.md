@@ -148,7 +148,8 @@ Requires the external `lazygit` executable. Opens a centered terminal in the
 current file's directory (editor cwd for unnamed/special buffers). LazyGit finds
 the repository itself. Repeated calls focus the existing session. `<C-g>` closes
 the float from terminal or Normal mode; Normal-mode `q` also closes it. Escape and
-other terminal keys pass through to LazyGit. Closing stops the job and releases
+other terminal keys pass through to LazyGit. Mouse wheel scrolling is disabled
+inside this terminal in both terminal and Normal modes. Closing stops the job and releases
 the terminal buffer; successful exit closes automatically, while failure output
 remains visible. Resizing follows the editor, and closing refreshes file/index
 state without discarding unsaved buffers. No Snacks or picker dependency.

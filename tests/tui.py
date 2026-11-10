@@ -107,10 +107,26 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
         if shutil.which("lazygit"):
             send("\x07")
             drain(0.7)
-            send("\x1c\x0e")
             terminal = snapshot(lambda value: value.get("lazygit", {}).get("running") and value["filetype"] == "git-tools-lazygit", "Real LazyGit did not open in the float")
             assert terminal["lazygit"]["relative"] == "editor"
             assert any(word in "\n".join(terminal["lines"]).lower() for word in ("lazygit", "files", "commits")), "No LazyGit UI rendered"
+            def wheel_events(position, button):
+                # SGR wheel input at a cell inside the float, including horizontal wheels.
+                x, y = position["col"] + 4, position["row"] + 4
+                return "".join(f"\x1b[<{button};{x};{y}M" for _ in range(8))
+
+            def check_wheel(mode):
+                before = snapshot(lambda value: value["mode"] == mode, "Unexpected mode before scrolling")
+                for button in (64, 65, 66, 67):
+                    send(wheel_events(before["lazygit"]["position"], button))
+                    after = snapshot(lambda value: True, "Cannot inspect wheel input")
+                    assert after["mode"] == mode, "Wheel changed LazyGit mode"
+                    assert after["lazygit"]["view"] == before["lazygit"]["view"], "Wheel moved terminal viewport/cursor"
+                    assert after["lines"] == before["lines"], "Wheel reached LazyGit and changed its panels"
+
+            check_wheel("t")
+            send("\x1c\x0e")
+            check_wheel("n")
             send(":lua require('git_tools').lazygit()\r")
             send("\x1c\x0e")
             snapshot(lambda value: value.get("lazygit", {}).get("job") == terminal["lazygit"]["job"], "Repeated open replaced the LazyGit job")
@@ -137,7 +153,15 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
                 send("\x1c\x0e")
                 closed = snapshot(lambda value: True, "Cannot inspect LazyGit exit")
             assert not closed.get("lazygit") and closed["lines"][0] == "ONE", "Real LazyGit quit did not close its window: " + json.dumps(closed, ensure_ascii=False)
-            print("git TUI: real LazyGit float, repeated open, resize, close/reopen and quit passed")
+            # An ordinary editing window must still respond to the same real wheel input.
+            send(":new | lua vim.api.nvim_buf_set_lines(0,0,-1,false,vim.tbl_map(tostring,vim.fn.range(1,200))); vim.cmd('normal! gg')\r")
+            send("\x1b[<65;10;5M" * 4)
+            editing = snapshot(lambda value: value["lines"][0] == "1", "Cannot inspect editing scroll")
+            send(":lua assert(vim.fn.line('w0') > 1, 'Editing wheel scroll was disabled')\r")
+            editing = snapshot(lambda value: True, "Cannot inspect editing scroll result")
+            assert not editing["error"], editing["error"]
+            send(":close!\r")
+            print("git TUI: real LazyGit wheel blocking in terminal/Normal modes, editing scroll, float, repeated open, resize, close/reopen and quit passed")
         assert len(transcript) > 500, "No real terminal frames captured"
         print("git TUI: continuous typing, first overlay, Visual staging, dih and undo passed")
     finally:

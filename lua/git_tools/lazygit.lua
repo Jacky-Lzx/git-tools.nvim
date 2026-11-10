@@ -199,6 +199,15 @@ function M.open(opts)
   vim.keymap.set("n", "q", function()
     session:close()
   end, { buffer = session.buf, silent = true, desc = "Close Lazygit" })
+  -- Keep wheel input from moving the terminal viewport or reaching LazyGit.
+  for _, key in ipairs({ "<ScrollWheelUp>", "<ScrollWheelDown>", "<ScrollWheelLeft>", "<ScrollWheelRight>" }) do
+    vim.keymap.set(
+      { "n", "t" },
+      key,
+      "<Nop>",
+      { buffer = session.buf, silent = true, desc = "Disable Lazygit scrolling" }
+    )
+  end
   session.theme = require("git_tools.lazygit_theme").prepare(vim.tbl_extend("force", {}, opts, { cwd = cwd }))
   local argv = vim.list_extend({ opts.command }, session.theme and session.theme.args or opts.args)
   local started, job = pcall(vim.fn.termopen, argv, {

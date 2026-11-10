@@ -194,7 +194,8 @@ git_tools.lazygit(opts)                                    *git-tools-lazygit*
     is current file's directory, then editor cwd. Repeated calls focus the
     existing session. C-g closes in terminal/Normal mode; Normal q also
         closes.
-    Escape passes through. Closing stops the job and frees the terminal
+    Escape passes through. Mouse wheel scrolling is disabled in this buffer
+    in terminal and Normal modes. Closing stops the job and frees the terminal
         buffer.
     Successful exit closes automatically; failures retain output. Original
     buffers are preserved and file/index state refreshed. Returns session with
