@@ -163,6 +163,9 @@ function M.open(opts)
     statuscolumn = "",
     colorcolumn = "",
     spell = false,
+    -- Normal-mode mouse positioning must not pan a full-screen terminal grid.
+    scrolloff = 0,
+    sidescrolloff = 0,
   }) do
     vim.wo[win][name] = value
   end

@@ -124,9 +124,32 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
                     assert after["lazygit"]["view"] == before["lazygit"]["view"], f"Wheel moved terminal viewport/cursor (mode={mode}, button={button})"
                     assert after["lines"] == before["lines"], "Wheel reached LazyGit and changed its panels"
 
+            def check_click(mode, from_source=False, edge="right"):
+                before = snapshot(lambda value: value["mode"] == mode, "Unexpected mode before clicking")
+                window = before["lazygit"]
+                x = window["position"]["col"] + window["width"] - 1
+                y = window["position"]["row"] + window["height"] // 2
+                if edge == "bottom":
+                    x = window["position"]["col"] + window["width"] // 2
+                    y = window["position"]["row"] + window["height"] - 1
+                if from_source:
+                    send("\x1b[<0;1;1M\x1b[<0;1;1m")
+                    snapshot(lambda value: value["filetype"] != "git-tools-lazygit", "Click did not focus source")
+                send(f"\x1b[<0;{x};{y}M\x1b[<0;{x};{y}m")
+                after = snapshot(lambda value: value["filetype"] == "git-tools-lazygit", "Click did not focus LazyGit")
+                assert after["lazygit"]["view"]["leftcol"] == 0, f"Click cropped LazyGit horizontally: {after['lazygit']['view']}"
+                assert after["lazygit"]["view"]["topline"] == before["lazygit"]["view"]["topline"], "Click moved terminal rows"
+                assert after["lazygit"]["left_edge"] == before["lazygit"]["left_edge"], "Click cropped the rendered left border"
+                if mode == "t" and after["mode"] != "t":
+                    send("i")
+
+            check_click("t")
             check_wheel("t")
             send("\x1c\x0e")
             check_wheel("n")
+            check_click("n")
+            check_click("n", edge="bottom")
+            check_click("n", from_source=True)
             send(":lua require('git_tools').lazygit()\r")
             send("\x1c\x0e")
             snapshot(lambda value: value.get("lazygit", {}).get("job") == terminal["lazygit"]["job"], "Repeated open replaced the LazyGit job")
@@ -161,7 +184,7 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
             editing = snapshot(lambda value: True, "Cannot inspect editing scroll result")
             assert not editing["error"], editing["error"]
             send(":close!\r")
-            print("git TUI: real LazyGit wheel blocking in terminal/Normal modes, editing scroll, float, repeated open, resize, close/reopen and quit passed")
+            print("git TUI: real LazyGit edge clicks/focus, wheel blocking in terminal/Normal modes, editing scroll, float, repeated open, resize, close/reopen and quit passed")
         assert len(transcript) > 500, "No real terminal frames captured"
         print("git TUI: continuous typing, first overlay, Visual staging, dih and undo passed")
     finally:

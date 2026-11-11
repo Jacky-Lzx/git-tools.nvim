@@ -5,6 +5,7 @@ if vim.fn.isdirectory(selection) == 1 then
 end
 vim.o.swapfile, vim.o.hidden = false, true
 vim.o.mouse = "a"
+vim.o.scrolloff, vim.o.sidescrolloff = 5, 8
 vim.g.mapleader = " "
 local tools = require("git_tools")
 if vim.env.GIT_TOOLS_CONFIG then
@@ -45,9 +46,18 @@ _G.git_tools_snapshot = function()
       job = session.job,
       running = not session.exited,
       width = vim.api.nvim_win_get_width(session.win),
+      height = vim.api.nvim_win_get_height(session.win),
       relative = vim.api.nvim_win_get_config(session.win).relative,
       position = vim.fn.screenpos(session.win, 1, 1),
-      view = vim.fn.winsaveview(),
+      view = vim.api.nvim_win_call(session.win, vim.fn.winsaveview),
+      left_edge = (function()
+        local position = vim.fn.screenpos(session.win, 1, 1)
+        local edge = {}
+        for row = position.row, position.row + vim.api.nvim_win_get_height(session.win) - 1 do
+          edge[#edge + 1] = vim.fn.screenstring(row, position.col)
+        end
+        return edge
+      end)(),
     }
   end
   local picker = _G.git_tools_test_picker
