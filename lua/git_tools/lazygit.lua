@@ -200,13 +200,16 @@ function M.open(opts)
     session:close()
   end, { buffer = session.buf, silent = true, desc = "Close Lazygit" })
   -- Keep wheel input from moving the terminal viewport or reaching LazyGit.
-  for _, key in ipairs({ "<ScrollWheelUp>", "<ScrollWheelDown>", "<ScrollWheelLeft>", "<ScrollWheelRight>" }) do
-    vim.keymap.set(
-      { "n", "t" },
-      key,
-      "<Nop>",
-      { buffer = session.buf, silent = true, desc = "Disable Lazygit scrolling" }
-    )
+  for _, direction in ipairs({ "Up", "Down", "Left", "Right" }) do
+    -- Shift-wheel uses distinct keycodes, even when the host emits horizontal events.
+    for _, modifier in ipairs({ "", "S-" }) do
+      vim.keymap.set(
+        { "n", "t" },
+        ("<%sScrollWheel%s>"):format(modifier, direction),
+        "<Nop>",
+        { buffer = session.buf, silent = true, desc = "Disable Lazygit scrolling" }
+      )
+    end
   end
   session.theme = require("git_tools.lazygit_theme").prepare(vim.tbl_extend("force", {}, opts, { cwd = cwd }))
   local argv = vim.list_extend({ opts.command }, session.theme and session.theme.args or opts.args)

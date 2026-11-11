@@ -111,17 +111,17 @@ with tempfile.TemporaryDirectory(prefix="git-tools-tui-") as temporary:
             assert terminal["lazygit"]["relative"] == "editor"
             assert any(word in "\n".join(terminal["lines"]).lower() for word in ("lazygit", "files", "commits")), "No LazyGit UI rendered"
             def wheel_events(position, button):
-                # SGR wheel input at a cell inside the float, including horizontal wheels.
+                # SGR wheel input inside the float; bit 4 adds Shift to each direction.
                 x, y = position["col"] + 4, position["row"] + 4
                 return "".join(f"\x1b[<{button};{x};{y}M" for _ in range(8))
 
             def check_wheel(mode):
                 before = snapshot(lambda value: value["mode"] == mode, "Unexpected mode before scrolling")
-                for button in (64, 65, 66, 67):
+                for button in (64, 65, 66, 67, 68, 69, 70, 71):
                     send(wheel_events(before["lazygit"]["position"], button))
                     after = snapshot(lambda value: True, "Cannot inspect wheel input")
                     assert after["mode"] == mode, "Wheel changed LazyGit mode"
-                    assert after["lazygit"]["view"] == before["lazygit"]["view"], "Wheel moved terminal viewport/cursor"
+                    assert after["lazygit"]["view"] == before["lazygit"]["view"], f"Wheel moved terminal viewport/cursor (mode={mode}, button={button})"
                     assert after["lines"] == before["lines"], "Wheel reached LazyGit and changed its panels"
 
             check_wheel("t")
