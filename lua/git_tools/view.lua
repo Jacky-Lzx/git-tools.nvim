@@ -3,6 +3,30 @@ local git, repository = require("git_tools.git"), require("git_tools.repository"
 local M = { active = {} }
 local View = {}
 View.__index = View
+local panel_ns = api.nvim_create_namespace("git_tools.view.panel")
+
+local function bar(text)
+  return text:gsub("%%", "%%%%"):gsub("[\r\n]", " ")
+end
+
+function View:resize()
+  if not self.tab or not api.nvim_tabpage_is_valid(self.tab) or not self.windows then
+    return
+  end
+  local total = api.nvim_win_get_width(self.panel_win)
+  for _, win in ipairs(self.windows) do
+    if not api.nvim_win_is_valid(win) then
+      return
+    end
+    total = total + api.nvim_win_get_width(win) + 1
+  end
+  local panel = math.min(32, math.max(18, math.floor(total * 0.18)))
+  api.nvim_win_set_width(self.panel_win, panel)
+  local width = math.floor((total - panel - #self.windows) / #self.windows)
+  for _, win in ipairs(self.windows) do
+    api.nvim_win_set_width(win, math.max(1, width))
+  end
+end
 
 function M.parse_names(output, root)
   local fields, items, i = vim.split(output, "\0", { plain = true }), {}, 1
@@ -153,7 +177,31 @@ function View:layout(merge)
     vim.bo[self.panel].swapfile = false
     api.nvim_buf_set_name(self.panel, "git-tools://" .. self.panel .. "/files")
     vim.wo[self.panel_win].winfixwidth = true
+    local panel_opts = {
+      number = false,
+      relativenumber = false,
+      signcolumn = "no",
+      foldcolumn = "0",
+      statuscolumn = "",
+      wrap = false,
+      list = false,
+      spell = false,
+      cursorline = true,
+      winbar = " Files",
+      statusline = " Enter: open  R: refresh  q: close",
+    }
+    for name, value in pairs(panel_opts) do
+      vim.wo[self.panel_win][name] = value
+    end
     self.group = api.nvim_create_augroup("GitToolsView" .. self.panel, { clear = true })
+    api.nvim_create_autocmd("VimResized", {
+      group = self.group,
+      callback = function()
+        if self:alive() then
+          self:resize()
+        end
+      end,
+    })
     api.nvim_create_autocmd("TabClosed", {
       group = self.group,
       callback = function()
@@ -199,11 +247,15 @@ function View:layout(merge)
       vim.bo.bufhidden = "wipe"
       vim.bo.buflisted = false
     end
-    api.nvim_win_set_width(self.panel_win, math.min(35, math.max(15, math.floor(vim.o.columns * 0.2))))
+    for _, win in ipairs(self.windows) do
+      vim.wo[win].winfixwidth = false
+    end
+    self:resize()
   end
   local lines = {}
   for _, item in ipairs(self.items) do
-    lines[#lines + 1] = item.text
+    local kind = ({ staged = "S", unstaged = "W", untracked = "?", conflict = "!" })[item.kind]
+    lines[#lines + 1] = " " .. (kind or item.status or "M") .. "  " .. item.path
   end
   if #lines == 0 then
     lines = { "No changed files. R: refresh; q: close" }
@@ -211,6 +263,7 @@ function View:layout(merge)
   vim.bo[self.panel].modifiable = true
   api.nvim_buf_set_lines(self.panel, 0, -1, false, lines)
   vim.bo[self.panel].modifiable = false
+  vim.wo[self.panel_win].winbar = " Files (" .. #self.items .. ")"
 end
 function View:select(index)
   if not self:alive() then
@@ -262,6 +315,17 @@ function View:select(index)
         right = scratch(new, tostring(after), item.path)
       end
       local buffers = merge and { left, right, scratch(new, "theirs", item.path) } or { left, right }
+      local function label(revision)
+        if revision == ":0" then
+          return "Index"
+        end
+        return revision and revision:sub(1, 10) or "Empty"
+      end
+      local labels = merge and { "Ours", "Result · editable", "Theirs" }
+        or {
+          self.opts.from or (item.kind == "staged" and "HEAD" or label(before)),
+          self.opts.to or (after and label(after) or "Working tree · editable"),
+        }
       for i, win in ipairs(self.windows) do
         require("git_tools.diff.theme").window(win)
         api.nvim_win_call(win, function()
@@ -272,6 +336,12 @@ function View:select(index)
           vim.cmd("diffthis")
         end)
         vim.wo[win].wrap = self.wrap
+        vim.wo[win].number = true
+        vim.wo[win].relativenumber = false
+        vim.wo[win].statuscolumn = ""
+        vim.wo[win].signcolumn = "no"
+        vim.wo[win].foldcolumn = "1"
+        vim.wo[win].winbar = "%#GitToolsDiffHunk# " .. bar(labels[i]) .. "%*  %<" .. bar(item.path)
         self:map(buffers[i], "<M-z>", function()
           self.wrap = not self.wrap
           for _, pane in ipairs(self.windows) do
@@ -288,6 +358,9 @@ function View:select(index)
         end, "Focus Git file list")
       end
       self.current, self.result = item, right
+      api.nvim_buf_clear_namespace(self.panel, panel_ns, 0, -1)
+      api.nvim_buf_set_extmark(self.panel, panel_ns, index - 1, 0, { line_hl_group = "CursorLine" })
+      api.nvim_win_set_cursor(self.panel_win, { index, 0 })
       if merge then
         local conflict = require("git_tools.conflict")
         for key, kind in pairs({ co = "ours", ct = "theirs", cb = "both" }) do

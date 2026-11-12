@@ -70,10 +70,15 @@ vim.keymap.set({ "n", "i" }, "<F12>", function()
     }
   end
   if view and view.current and not view.closed then
-    result.view = { wrap = {}, screen = {} }
+    result.view = { wrap = {}, screen = {}, widths = {}, titles = {} }
     for _, win in ipairs(view.windows) do
       table.insert(result.view.wrap, vim.wo[win].wrap)
       table.insert(result.view.screen, screen(win))
+      table.insert(result.view.widths, api.nvim_win_get_width(win))
+      table.insert(
+        result.view.titles,
+        api.nvim_eval_statusline(vim.wo[win].winbar, { winid = win, use_winbar = true }).str
+      )
     end
   end
   vim.fn.writefile({ vim.json.encode(result) }, vim.env.GIT_TOOLS_TUI_DIR .. "/snapshot.json")

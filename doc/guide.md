@@ -232,7 +232,12 @@ git.merge() -- conflicted files only, ours / editable result / theirs
 ```
 
 Each view owns a tab with a file panel and native Neovim diff windows. Panel
-`<CR>` selects a file, `R` reloads the list; `<leader>gp` returns from a diff pane
+rows mark staged (`S`), working (`W`), untracked (`?`) and conflicted (`!`) files;
+revision comparisons show Git's change status. The selected file stays highlighted.
+Pane headers identify the source and path; comparison panes share the remaining
+width equally, including after terminal resizing. Line numbers are absolute.
+
+In the panel, `<CR>` selects a file, `R` reloads the list; `<leader>gp` returns from a diff pane
 to the panel, and `q` closes the view. Revision/index panes are read-only; working
 panes use existing buffers and preserve unsaved changes on close. Native `]c`,
 `[c`, diff folds and `do`/`dp` remain available subject to buffer writability.

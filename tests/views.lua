@@ -38,6 +38,18 @@ wait(function()
   return view.current ~= nil
 end)
 assert(view.current.kind == "staged" and text(view.windows[1]) == "base" and text(view.windows[2]) == "index")
+local function balanced()
+  local widths = {}
+  for _, win in ipairs(view.windows) do
+    widths[#widths + 1] = api.nvim_win_get_width(win)
+  end
+  table.sort(widths)
+  assert(widths[#widths] - widths[1] <= 1, "Diff panes must share available width equally: " .. vim.inspect(widths))
+end
+balanced()
+assert(not vim.wo[view.panel_win].number and not vim.wo[view.panel_win].relativenumber)
+assert(vim.wo[view.windows[2]].winbar:find("Index", 1, true))
+assert(api.nvim_buf_get_lines(view.panel, 0, 1, false)[1] == " S  a.txt")
 for _, win in ipairs(view.windows) do
   assert(vim.wo[win].winhighlight:find("DiffAdd:GitToolsDiffAdd", 1, true), "Use subtle pane-local diff colors")
 end
@@ -51,6 +63,11 @@ wait(function()
   return view.current.kind == "unstaged"
 end)
 assert(text(view.windows[1]) == "index" and text(view.windows[2]) == "disk")
+assert(api.nvim_win_get_cursor(view.panel_win)[1] == 2, "Panel selection follows displayed file")
+assert(vim.wo[view.windows[2]].winbar:find("Working tree", 1, true))
+vim.o.columns = 120
+api.nvim_exec_autocmds("VimResized", {})
+balanced()
 assert(vim.wo[view.windows[1]].diff and vim.wo[view.windows[2]].diff)
 assert(vim.wo[view.windows[1]].wrap and vim.wo[view.windows[2]].wrap, "Changing files retains wrap")
 local actual = view.result
@@ -106,6 +123,8 @@ wait(function()
   return view.current ~= nil
 end)
 assert(#view.windows == 3 and text(view.windows[1]) == "ours" and text(view.windows[3]) == "theirs")
+balanced()
+assert(vim.wo[view.windows[2]].winbar:find("Result", 1, true))
 for _, win in ipairs(view.windows) do
   assert(vim.wo[win].wrap, "Configured wrap applies to all merge panes")
 end

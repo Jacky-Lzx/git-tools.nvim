@@ -98,7 +98,13 @@ for layout in layouts:
             send("\x03")  # C-c: close
             snapshot(lambda v: "picker" not in v and v["origin"])
             send("\x1b[21~")  # F10: native comparison tab
-            snapshot(lambda v: "view" in v)
+            native = snapshot(lambda v: "view" in v)["view"]
+            assert abs(native["widths"][0] - native["widths"][1]) <= 1, native
+            assert "Index" in native["titles"][0] and "Working tree" in native["titles"][1], native
+            fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 56, 140, 0, 0))
+            os.kill(child.pid, signal.SIGWINCH)
+            resized_view = snapshot(lambda v: v.get("view", {}).get("widths", [0])[0] > native["widths"][0])["view"]
+            assert abs(resized_view["widths"][0] - resized_view["widths"][1]) <= 1, resized_view
             send("\x1bz")
             comparison = snapshot(lambda v: v.get("view", {}).get("wrap") == [True, True])
             assert all("_END" in text for text in comparison["view"]["screen"])
