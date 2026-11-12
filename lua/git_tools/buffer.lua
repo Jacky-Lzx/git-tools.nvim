@@ -52,6 +52,39 @@ function M.draw(s)
   local buf, count = s.buf, api.nvim_buf_line_count(s.buf)
   api.nvim_buf_clear_namespace(buf, ns, 0, -1)
   api.nvim_buf_clear_namespace(buf, overlay_ns, 0, -1)
+  -- Staged hunks use index coordinates; project surviving lines into the buffer.
+  local function buffer_line(line)
+    local delta = 0
+    for _, change in ipairs(s.hunks) do
+      if line <= change.old0 then
+        break
+      end
+      if line <= change.old0 + change.old_count then
+        if change.new_count == 0 then
+          return nil
+        end
+        return change.new0 + math.min(line - change.old0, change.new_count)
+      end
+      delta = delta + change.new_count - change.old_count
+    end
+    return line + delta
+  end
+  if M.config.numhl then
+    for _, change in ipairs(s.staged or {}) do
+      local kind = change.old_count == 0 and "Add" or change.new_count == 0 and "Delete" or "Change"
+      local first, last = h.bounds(change)
+      for line = first, last do
+        local projected = buffer_line(line)
+        if projected then
+          api.nvim_buf_set_extmark(buf, ns, math.max(0, math.min(count, projected) - 1), 0, {
+            number_hl_group = "GitToolsStaged" .. kind,
+            priority = 5,
+            strict = false,
+          })
+        end
+      end
+    end
+  end
   local summary = { added = 0, changed = 0, removed = 0 }
   for _, change in ipairs(s.hunks) do
     local old, new = change.old_count, change.new_count
@@ -405,6 +438,8 @@ function M.toggle_overlay(buf)
   end)
 end
 
+local staged_groups = {}
+
 local function groups()
   -- DiffAdd may use an inverted foreground/background (e.g. Dracula).
   -- The syntax group carries the addition color without a line background.
@@ -418,6 +453,23 @@ local function groups()
     WordAdd = "DiffText",
   }) do
     api.nvim_set_hl(0, "GitTools" .. name, { link = target, default = true })
+  end
+  local normal = api.nvim_get_hl(0, { name = "Normal", link = false })
+  local bg = normal.bg or (vim.o.background == "light" and 0xffffff or 0x14161b)
+  for _, kind in ipairs({ "Add", "Change", "Delete" }) do
+    local name = "GitToolsStaged" .. kind
+    local current = api.nvim_get_hl(0, { name = name, link = false })
+    if next(current) == nil or vim.deep_equal(current, staged_groups[name]) then
+      local source = api.nvim_get_hl(0, { name = "GitTools" .. kind, link = false })
+      local fg, mixed = source.fg or normal.fg or 0x808080, 0
+      for _, shift in ipairs({ 0, 8, 16 }) do
+        local a = bit.band(bit.rshift(fg, shift), 255)
+        local b = bit.band(bit.rshift(bg, shift), 255)
+        mixed = mixed + math.floor(a * 0.5 + b * 0.5 + 0.5) * 2 ^ shift
+      end
+      api.nvim_set_hl(0, name, { fg = mixed })
+      staged_groups[name] = api.nvim_get_hl(0, { name = name, link = false })
+    end
   end
 end
 

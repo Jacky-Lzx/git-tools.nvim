@@ -108,6 +108,9 @@ git_tools.setup({buffer={...}})                             *git-tools-buffer*
     word_diff=false, line_blame=false, debounce=100 (ms). buffer=false
         disables
     initial setup. No global mappings are installed.
+    Staged changes retain muted number colors; unstaged colors take priority
+    on overlapping lines. Override GitToolsStagedAdd, GitToolsStagedChange,
+    and GitToolsStagedDelete to customize the staged colors.
     Optional on_attach(buf) runs once after the first ready repository
         snapshot.
     nav_hunk("next"|"prev"|"first"|"last"), select_hunk(), preview_hunk(),
