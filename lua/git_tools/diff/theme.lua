@@ -32,6 +32,9 @@ local function apply(c)
   local groups = {
     Add = { bg = mix(c.git.add, bg, 0.10) },
     Delete = { bg = mix(c.git.delete, bg, 0.13) },
+    Change = { bg = mix(c.ui.accent, bg, 0.08) },
+    Text = { bg = mix(c.ui.accent, bg, 0.24), bold = true },
+    Filler = { fg = c.ui.muted, bg = bg },
     AddText = { bg = mix(c.git.add, bg, 0.48), bold = true, underline = true },
     DeleteText = { bg = mix(c.git.delete, bg, 0.50), bold = true, underline = true },
     AddNumber = { fg = c.git.add },
@@ -88,6 +91,33 @@ function M.setup()
     end,
   })
   attach()
+end
+
+-- Scope native diff colors to our panes rather than changing the user's theme.
+function M.window(win)
+  M.setup()
+  local mappings = {
+    DiffAdd = "GitToolsDiffAdd",
+    DiffDelete = "GitToolsDiffDelete",
+    DiffChange = "GitToolsDiffChange",
+    DiffText = "GitToolsDiffText",
+    DiffTextAdd = "GitToolsDiffAddText",
+    DiffTextDelete = "GitToolsDiffDeleteText",
+    DiffAdded = "GitToolsDiffAdd",
+    DiffRemoved = "GitToolsDiffDelete",
+    DiffChanged = "GitToolsDiffChange",
+    DiffFiller = "GitToolsDiffFiller",
+  }
+  local entries = {}
+  for entry in vim.wo[win].winhighlight:gmatch("[^,]+") do
+    if not mappings[entry:match("^([^:]+):")] then
+      entries[#entries + 1] = entry
+    end
+  end
+  for source, target in pairs(mappings) do
+    entries[#entries + 1] = source .. ":" .. target
+  end
+  vim.wo[win].winhighlight = table.concat(entries, ",")
 end
 
 return M

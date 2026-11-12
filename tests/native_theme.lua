@@ -7,6 +7,17 @@ api.nvim_set_hl(0, "Added", { fg = "#00aa00" })
 native.prepare(patch, {}, 80)
 assert(api.nvim_get_hl(0, { name = "GitToolsDiffAddNumber" }).fg == 0x00aa00)
 assert(not api.nvim_get_hl(0, { name = "GitToolsDiffAdd" }).fg, "Backgrounds must preserve syntax foregrounds")
+-- Native comparison panes must avoid bright/reversed theme DiffAdd colors.
+api.nvim_set_hl(0, "Normal", { bg = "#282a36", fg = "#f8f8f2" })
+api.nvim_set_hl(0, "DiffAdd", { fg = "#50fa7b", reverse = true })
+api.nvim_exec_autocmds("ColorScheme", {})
+vim.wo.winhighlight = "Normal:Normal,DiffAdd:DiffAdd"
+require("git_tools.diff.theme").window(0)
+assert(vim.wo.winhighlight:find("Normal:Normal", 1, true))
+assert(not vim.wo.winhighlight:find("DiffAdd:DiffAdd", 1, true))
+local add = api.nvim_get_hl(0, { name = "GitToolsDiffAdd" })
+assert(add.bg == 0x243731 and not add.reverse and not add.fg, "Blend only 10 percent green into the background")
+assert(api.nvim_get_hl(0, { name = "DiffAdd" }).reverse, "Do not change global theme highlights")
 
 -- Load the real optional provider after the renderer, exercising late attachment.
 local root = vim.env.GIT_TOOLS_ROOT or vim.fn.getcwd()

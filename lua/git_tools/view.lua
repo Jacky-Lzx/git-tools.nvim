@@ -263,6 +263,7 @@ function View:select(index)
       end
       local buffers = merge and { left, right, scratch(new, "theirs", item.path) } or { left, right }
       for i, win in ipairs(self.windows) do
+        require("git_tools.diff.theme").window(win)
         api.nvim_win_call(win, function()
           vim.cmd("diffoff")
         end)

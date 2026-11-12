@@ -38,6 +38,9 @@ wait(function()
   return view.current ~= nil
 end)
 assert(view.current.kind == "staged" and text(view.windows[1]) == "base" and text(view.windows[2]) == "index")
+for _, win in ipairs(view.windows) do
+  assert(vim.wo[win].winhighlight:find("DiffAdd:GitToolsDiffAdd", 1, true), "Use subtle pane-local diff colors")
+end
 assert(not vim.wo[view.windows[1]].wrap and not vim.wo[view.windows[2]].wrap)
 api.nvim_set_current_win(view.windows[1])
 local wrap_mapping = vim.fn.maparg("<M-z>", "n", false, true).callback
