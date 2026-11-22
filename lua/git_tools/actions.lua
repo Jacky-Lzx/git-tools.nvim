@@ -46,6 +46,10 @@ function M.change(action, opts)
       complete(opts, "A Git index operation is already running")
       return
     end
+    if action == "stage" and s.ignored then
+      complete(opts, "File is ignored by Git")
+      return
+    end
     local before, after, changes = s.index, s.text, s.hunks
     local selected = range(opts, changes)
     local reverse = action == "reset"
@@ -121,6 +125,7 @@ function M.change(action, opts)
     buffer.read(task, s.repo, s.path, function(read_err, data)
       if
         read_err
+        or (action == "stage" and data.ignored)
         or data.index.text ~= snapshot
         or data.exists ~= old_exists
         or not api.nvim_buf_is_valid(buf)

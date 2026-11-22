@@ -186,6 +186,48 @@ assert(git("show", ":empty.txt") == "", "An empty buffer must stage zero bytes")
 action("unstage_buffer")
 assert(git("ls-files", "--", "empty.txt") == "", "An empty added file must unstage")
 buffer.detach(buf)
+
+local ignored = ":cache [1].log"
+vim.fn.writefile({ "generated" }, root .. "/" .. ignored)
+vim.cmd.edit(root .. "/" .. ignored)
+buf = api.nvim_get_current_buf()
+local signs = api.nvim_get_namespaces().GitToolsSigns
+local function number_marks()
+  return api.nvim_buf_get_extmarks(buf, signs, 0, -1, { details = true })
+end
+assert(#ready().hunks == 1 and number_marks()[1][4].number_hl_group == "GitToolsAdd")
+vim.cmd.edit(root .. "/.gitignore")
+api.nvim_buf_set_lines(0, 0, -1, false, { "*.log" })
+vim.cmd.write()
+assert(
+  vim.wait(5000, function()
+    return #buffer.get_hunks(buf) == 0 and #number_marks() == 0
+  end, 5),
+  "Saving ignore rules must clear existing hunks and number marks"
+)
+local stage_error
+tools.stage_buffer({
+  buf = buf,
+  callback = function(err)
+    stage_error = err or false
+  end,
+})
+assert(vim.wait(5000, function()
+  return stage_error ~= nil
+end, 5) and stage_error == "File is ignored by Git")
+assert(git("ls-files", "--", "./" .. ignored) == "")
+
+git("add", "-f", "--", "./" .. ignored)
+git("commit", "-qm", "track matching file", "--", "./" .. ignored)
+vim.cmd.buffer(buf)
+api.nvim_buf_set_lines(buf, 0, -1, false, { "changed" })
+assert(#ready().hunks == 1 and number_marks()[1][4].number_hl_group == "GitToolsChange")
+git("rm", "--cached", "--", "./" .. ignored)
+local removed = ready()
+assert(#removed.hunks == 0 and #removed.staged == 1)
+assert(number_marks()[1][4].number_hl_group == "GitToolsStagedDelete")
+buffer.detach(buf)
+
 vim.fn.delete(root, "rf")
-print("git hunks: partial stage/unstage/reset, unsaved buffers, newlines, overlay and external index refresh passed")
+print("git hunks: stage/unstage/reset, unsaved buffers, overlay, index refresh and ignored paths passed")
 vim.cmd("qa!")

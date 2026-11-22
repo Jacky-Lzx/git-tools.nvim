@@ -148,7 +148,7 @@ function M.read(task, repo, path, callback)
       callback("Hunk operations require a regular text file")
       return
     end
-    local function head(index)
+    local function head(index, ignored)
       git.run(task, repo.root, { "ls-tree", "-z", "HEAD", "--", path }, function(head_err, tree)
         if head_err and not head_err:find("Not a valid object name HEAD", 1, true) then
           callback(head_err)
@@ -168,6 +168,7 @@ function M.read(task, repo, path, callback)
             exists = sha ~= nil,
             head_exists = head_sha ~= nil,
             mode = mode or new_mode,
+            ignored = ignored,
           })
         end
         if head_sha then
@@ -188,11 +189,26 @@ function M.read(task, repo, path, callback)
         if e then
           callback(e)
         else
-          head(text)
+          head(text, false)
         end
       end)
     else
-      head("")
+      -- check-ignore rejects literal pathspec mode. Prefix the path so a
+      -- leading colon in a filename cannot be parsed as pathspec magic.
+      git.run(task, repo.root, {
+        "--no-literal-pathspecs",
+        "check-ignore",
+        "--no-index",
+        "--quiet",
+        "--",
+        "./" .. path,
+      }, function(ignore_err, _, code)
+        if code == 0 or code == 1 then
+          head("", code == 0)
+        else
+          callback(ignore_err)
+        end
+      end)
     end
   end)
 end
@@ -253,8 +269,10 @@ function M.refresh(buf, callback)
       end
       s.repo, s.path, s.index, s.head = repo, path, data.index, data.head
       s.exists, s.head_exists, s.mode, s.error = data.exists, data.head_exists, data.mode, nil
+      s.ignored = data.ignored
       s.text, s.tick = contents(buf), tick
-      s.hunks, s.staged = h.diff(s.index, s.text), h.diff(s.head, s.index)
+      s.hunks = s.ignored and {} or h.diff(s.index, s.text)
+      s.staged = h.diff(s.head, s.index)
       git.run(task, repo.root, { "symbolic-ref", "--quiet", "--short", "HEAD" }, function(_, branch)
         if valid(s) then
           s.branch = branch:gsub("\n$", "")
