@@ -44,6 +44,20 @@ function View:resize()
   end
 end
 
+function View:ensure_pane_order()
+  local anchor, reordered = self.panel_win, false
+  for _, win in ipairs(self.windows) do
+    if api.nvim_win_get_position(win)[2] <= api.nvim_win_get_position(anchor)[2] then
+      api.nvim_win_set_config(win, { win = anchor, split = "right" })
+      reordered = true
+    end
+    anchor = win
+  end
+  if reordered then
+    self:resize()
+  end
+end
+
 function M.parse_names(output, root)
   local fields, items, i = vim.split(output, "\0", { plain = true }), {}, 1
   while i < #fields do
@@ -490,6 +504,8 @@ function View:select(index, keep_focus)
       else
         api.nvim_set_current_win(self.windows[working_tree_left and 1 or 2])
       end
+      -- Window setup and focus callbacks have run. Verify the resulting columns.
+      self:ensure_pane_order()
       self:map_pane_tab()
       if self.opts.on_ready then
         self.opts.on_ready(self)

@@ -133,13 +133,27 @@ local focus_probe = api.nvim_create_autocmd("OptionSet", {
     end
   end,
 })
+local reversed_panes = false
+local order_probe = api.nvim_create_autocmd("OptionSet", {
+  pattern = "winbar",
+  callback = function()
+    if reversed_panes or not vim.v.option_new:find("HEAD~1", 1, true) then
+      return
+    end
+    local working, revision = unpack(view.windows)
+    api.nvim_win_set_config(working, { win = revision, split = "right" })
+    reversed_panes = api.nvim_win_get_position(working)[2] > api.nvim_win_get_position(revision)[2]
+  end,
+})
 vim.cmd("GitTools compare")
 view = assert(next(require("git_tools.view").active), "The compare command must open a view")
 wait(function()
   return view.current ~= nil
 end)
 api.nvim_del_autocmd(focus_probe)
+api.nvim_del_autocmd(order_probe)
 assert(moved_focus, "The focus probe must run while the comparison splits are created")
+assert(reversed_panes, "The order probe must reverse the physical panes after creating them")
 assert(text(view.windows[1]) == "unsaved" and text(view.windows[2]) == "base")
 assert(view.result == actual and api.nvim_win_get_buf(view.windows[1]) == actual and vim.bo[actual].modifiable)
 assert(not vim.bo[api.nvim_win_get_buf(view.windows[2])].modifiable)
