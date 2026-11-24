@@ -7,6 +7,33 @@ assert(vim.deep_equal(caller, options), "setup mutated caller configuration")
 local commands = vim.api.nvim_get_commands({})
 local handlers = vim.api.nvim_get_autocmds({})
 assert(commands.GitTools, "setup did not register :GitTools")
+local function complete(line)
+  return vim.fn.getcompletion(line, "cmdline", true)
+end
+local wildoptions = vim.o.wildoptions
+vim.o.wildoptions = ""
+assert(#complete("GitTools ") == 18)
+assert(vim.deep_equal(complete("GitTools co"), { "compare" }))
+assert(vim.deep_equal(complete("set number | GitTools co"), { "compare" }))
+assert(vim.deep_equal(complete("GitTools compare"), { "compare" }))
+assert(vim.deep_equal(complete("silent 1,2GitT compare "), { "HEAD", "HEAD~1" }))
+assert(vim.deep_equal(complete("GitTools compare HEAD HEAD~"), { "HEAD~1" }))
+assert(vim.deep_equal(complete("GitTools log HEAD~"), { "HEAD~1" }))
+assert(#complete("GitTools compare HEAD HEAD~1 ") == 0)
+assert(#complete("GitTools log HEAD ") == 0)
+assert(#complete("GitTools status ") == 0)
+assert(#complete("GitTools cmp") == 0)
+vim.o.wildoptions = "fuzzy"
+assert(vim.deep_equal(complete("GitTools cmp"), { "compare" }))
+vim.o.wildoptions = wildoptions
+local stage_hunk = plugin.stage_hunk
+local stage_args
+plugin.stage_hunk = function(args)
+  stage_args = args
+end
+vim.cmd("1GitTools stage")
+plugin.stage_hunk = stage_hunk
+assert(vim.deep_equal(stage_args, { range = { 1, 1 } }), "GitTools stage must still dispatch to stage_hunk")
 assert(not pcall(plugin.setup, false), "setup(false) must reject an invalid configuration type")
 assert(vim.deep_equal(commands, vim.api.nvim_get_commands({})), "Invalid setup replaced commands")
 assert(vim.deep_equal(handlers, vim.api.nvim_get_autocmds({})), "Invalid setup replaced handlers")

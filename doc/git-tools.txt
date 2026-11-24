@@ -172,6 +172,8 @@ git_tools.merge(opts)                                        *git-tools-merge*
         reset and
     *_buffer variants. compare accepts from/to; log accepts a revision.
     Without a revision, :GitTools compare uses HEAD~1 as its baseline.
+    Completion suggests actions first, then HEAD and HEAD~1 in revision
+    positions for compare and log.
     Ex ranges select lines for blame/history/browse/hunk operations.
 
 git_tools.branches(opts)                                  *git-tools-branches*

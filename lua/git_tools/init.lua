@@ -2,6 +2,62 @@
 local M = { diff = require("git_tools.diff") }
 local configured = false
 
+local command_actions = {
+  "status",
+  "changes",
+  "branches",
+  "stash",
+  "log",
+  "file_history",
+  "line_history",
+  "blame",
+  "browse",
+  "compare",
+  "merge",
+  "lazygit",
+  "stage",
+  "unstage",
+  "reset",
+  "stage_buffer",
+  "unstage_buffer",
+  "reset_buffer",
+}
+local command_aliases = { stage = "stage_hunk", unstage = "unstage_hunk", reset = "reset_hunk" }
+local revision_arguments = { compare = 2, log = 1 }
+local default_compare_revision = "HEAD~1"
+local revision_candidates = { "HEAD", default_compare_revision }
+
+local function complete_command(lead, line, cursor)
+  local before = line:sub(1, cursor - #lead)
+  local ok, parsed = pcall(vim.api.nvim_parse_cmd, before, {})
+  while ok and parsed.nextcmd ~= "" do
+    ok, parsed = pcall(vim.api.nvim_parse_cmd, parsed.nextcmd, {})
+  end
+  if not ok or parsed.cmd ~= "GitTools" then
+    return {}
+  end
+
+  local args = parsed.args
+  local candidates
+  if #args == 0 then
+    candidates = command_actions
+  elseif #args <= (revision_arguments[args[1]] or 0) then
+    candidates = revision_candidates
+  else
+    return {}
+  end
+
+  if lead == "" then
+    return candidates
+  end
+  if vim.tbl_contains(vim.opt.wildoptions:get(), "fuzzy") then
+    return vim.fn.matchfuzzy(candidates, lead)
+  end
+  return vim.tbl_filter(function(candidate)
+    return vim.startswith(candidate, lead)
+  end, candidates)
+end
+
 -- Snapshot only already-loaded providers; never start Git or create a view.
 function M.get_state(opts)
   opts = opts or {}
@@ -73,34 +129,14 @@ function M.setup(opts)
 
   commands.create("GitTools", function(command)
     local name = command.fargs[1] or "status"
-    local actions = {
-      status = M.status,
-      changes = M.changes,
-      branches = M.branches,
-      stash = M.stash,
-      log = M.log,
-      file_history = M.file_history,
-      line_history = M.line_history,
-      blame = M.blame,
-      browse = M.browse,
-      compare = M.compare,
-      merge = M.merge,
-      lazygit = M.lazygit,
-      stage = M.stage_hunk,
-      unstage = M.unstage_hunk,
-      reset = M.reset_hunk,
-      stage_buffer = M.stage_buffer,
-      unstage_buffer = M.unstage_buffer,
-      reset_buffer = M.reset_buffer,
-    }
-
-    if not actions[name] then
+    local action = vim.tbl_contains(command_actions, name) and M[command_aliases[name] or name]
+    if not action then
       error("Unknown GitTools action: " .. name)
     end
 
     local args = {}
     if name == "compare" then
-      args.from, args.to = command.fargs[2] or "HEAD~1", command.fargs[3]
+      args.from, args.to = command.fargs[2] or default_compare_revision, command.fargs[3]
     end
 
     if name == "log" then
@@ -111,32 +147,11 @@ function M.setup(opts)
       args.range = { command.line1, command.line2 }
     end
 
-    actions[name](args)
+    action(args)
   end, {
     nargs = "*",
     range = true,
-    complete = function()
-      return {
-        "status",
-        "changes",
-        "branches",
-        "stash",
-        "log",
-        "file_history",
-        "line_history",
-        "blame",
-        "browse",
-        "compare",
-        "merge",
-        "lazygit",
-        "stage",
-        "unstage",
-        "reset",
-        "stage_buffer",
-        "unstage_buffer",
-        "reset_buffer",
-      }
-    end,
+    complete = complete_command,
   })
   configured = true
 end
