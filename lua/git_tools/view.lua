@@ -325,11 +325,13 @@ function View:layout(merge)
     vim.cmd("tabnew")
     self.tab, self.panel = api.nvim_get_current_tabpage(), api.nvim_get_current_buf()
     self.panel_win = api.nvim_get_current_win()
+
     vim.bo[self.panel].buftype = "nofile"
     vim.bo[self.panel].bufhidden = "wipe"
     vim.bo[self.panel].swapfile = false
     api.nvim_buf_set_name(self.panel, "git-tools://" .. self.panel .. "/files")
     vim.wo[self.panel_win].winfixwidth = true
+
     local panel_opts = {
       number = false,
       relativenumber = false,
@@ -346,7 +348,9 @@ function View:layout(merge)
     for name, value in pairs(panel_opts) do
       vim.wo[self.panel_win][name] = value
     end
+
     require("git_tools.diff.theme").compare_panel(self.panel_win)
+
     self.group = api.nvim_create_augroup("GitToolsView" .. self.panel, { clear = true })
     api.nvim_create_autocmd("User", {
       group = self.group,
@@ -355,6 +359,7 @@ function View:layout(merge)
         self:decorate_panel()
       end,
     })
+
     api.nvim_create_autocmd("VimResized", {
       group = self.group,
       callback = function()
@@ -363,6 +368,7 @@ function View:layout(merge)
         end
       end,
     })
+
     api.nvim_create_autocmd("TabClosed", {
       group = self.group,
       callback = function()
@@ -373,6 +379,7 @@ function View:layout(merge)
         end)
       end,
     })
+
     -- Working-tree buffers can also be used outside the comparison tab.
     api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
       group = self.group,
@@ -380,32 +387,40 @@ function View:layout(merge)
         self:map_pane_tab()
       end,
     })
+
     api.nvim_create_autocmd({ "BufLeave", "WinLeave" }, {
       group = self.group,
       callback = function()
         self:unmap_pane_tab()
       end,
     })
+
     self:map(self.panel, "q", function()
       self:close()
     end, "Close Git diff view")
+
     self:map(self.panel, "<CR>", function()
       self:open_panel_row()
     end, "Open file diff or toggle folder")
+
     self:map(self.panel, "<Tab>", function()
       self:next_file()
     end, "Show next changed file")
+
     self:map(self.panel, "R", function()
       self:refresh()
     end, "Refresh Git diff view")
   end
+
   if self.merge ~= merge or not self.windows then
     for _, win in ipairs(self.windows or {}) do
       if api.nvim_win_is_valid(win) then
         api.nvim_win_close(win, false)
       end
     end
+
     self.windows, self.merge = {}, merge
+
     -- Buffer and window autocmds may change focus as the panes open.
     local anchor = self.panel_win
     for index = 1, merge and 3 or 2 do
@@ -416,8 +431,10 @@ function View:layout(merge)
       vim.wo[win].winfixwidth = false
       anchor = win
     end
+
     self:resize()
   end
+
   if self.panel_items ~= self.items then
     self:render_panel()
   end
@@ -738,6 +755,7 @@ function M.open(opts)
       view:cleanup()
       return
     end
+
     view.repo = repo
     local history = require("git_tools.history")
     if opts.path and opts.path:sub(1, 1) == "/" then
