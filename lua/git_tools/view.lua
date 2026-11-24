@@ -506,6 +506,8 @@ function View:select(index, keep_focus)
         vim.wo[win].wrap = self.wrap
         vim.wo[win].number = true
         vim.wo[win].relativenumber = false
+        -- Native diff underlines changed text when CursorLine covers the text area.
+        vim.wo[win].cursorlineopt = "number"
         vim.wo[win].statuscolumn = ""
         vim.wo[win].signcolumn = "no"
         vim.wo[win].foldcolumn = "1"

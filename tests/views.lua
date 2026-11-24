@@ -63,6 +63,7 @@ assert(vim.wo[view.windows[2]].winbar:find("Index", 1, true))
 assert(api.nvim_buf_get_lines(view.panel, 0, 1, false)[1] == " S  a.txt")
 for _, win in ipairs(view.windows) do
   assert(vim.wo[win].winhighlight:find("DiffAdd:GitToolsDiffAdd", 1, true), "Use subtle pane-local diff colors")
+  assert(vim.wo[win].cursorlineopt == "number", "Diff panes must avoid CursorLine underlining the text area")
 end
 assert(not vim.wo[view.windows[1]].wrap and not vim.wo[view.windows[2]].wrap)
 api.nvim_set_current_win(view.windows[1])
