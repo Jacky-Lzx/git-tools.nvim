@@ -222,6 +222,9 @@ status.scrollbar() -- register after nvim-scrollbar.setup(); gitsigns handler of
 
 ## Multi-file diffs and merge conflicts
 
+`:GitTools compare` shows the working tree on the left and `HEAD~1` on the
+right. Pass one or two revisions to choose the comparison explicitly.
+
 ```lua
 local git = require("git_tools")
 git.compare() -- file panel with staged (HEAD/index) and unstaged (index/buffer)

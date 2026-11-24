@@ -47,8 +47,12 @@ end)
 assert(view.current.kind == "staged" and text(view.windows[1]) == "base" and text(view.windows[2]) == "index")
 local function balanced()
   local widths = {}
+  local column = api.nvim_win_get_position(view.panel_win)[2]
   for _, win in ipairs(view.windows) do
     widths[#widths + 1] = api.nvim_win_get_width(win)
+    local pane_column = api.nvim_win_get_position(win)[2]
+    assert(pane_column > column, "Comparison panes must appear in order to the right of the file panel")
+    column = pane_column
   end
   table.sort(widths)
   assert(widths[#widths] - widths[1] <= 1, "Diff panes must share available width equally: " .. vim.inspect(widths))
@@ -119,17 +123,37 @@ view:close()
 tools.setup({ buffer = false })
 local original_cwd = vim.fn.getcwd()
 vim.cmd.tcd(vim.fn.fnameescape(root))
-vim.cmd("GitTools compare HEAD~1")
+local moved_focus = false
+local focus_probe = api.nvim_create_autocmd("OptionSet", {
+  pattern = "bufhidden",
+  callback = function()
+    if not moved_focus and view.windows and #view.windows == 1 then
+      moved_focus = true
+      api.nvim_set_current_win(view.panel_win)
+    end
+  end,
+})
+vim.cmd("GitTools compare")
 view = assert(next(require("git_tools.view").active), "The compare command must open a view")
 wait(function()
   return view.current ~= nil
 end)
+api.nvim_del_autocmd(focus_probe)
+assert(moved_focus, "The focus probe must run while the comparison splits are created")
 assert(text(view.windows[1]) == "unsaved" and text(view.windows[2]) == "base")
 assert(view.result == actual and api.nvim_win_get_buf(view.windows[1]) == actual and vim.bo[actual].modifiable)
 assert(not vim.bo[api.nvim_win_get_buf(view.windows[2])].modifiable)
 assert(vim.wo[view.windows[1]].winbar:find("Working tree", 1, true))
 assert(vim.wo[view.windows[2]].winbar:find("HEAD~1", 1, true))
 assert(api.nvim_get_current_win() == view.windows[1])
+balanced()
+view:close()
+vim.cmd("GitTools compare HEAD")
+view = assert(next(require("git_tools.view").active), "The compare command must accept an explicit revision")
+wait(function()
+  return view.current ~= nil
+end)
+assert(text(view.windows[1]) == "unsaved" and text(view.windows[2]) == "disk")
 view:close()
 vim.cmd.tcd(vim.fn.fnameescape(original_cwd))
 api.nvim_buf_delete(actual, { force = true })

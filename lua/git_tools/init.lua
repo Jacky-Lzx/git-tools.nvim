@@ -40,12 +40,15 @@ end
 function M.compare(opts)
   return require("git_tools.view").open(opts)
 end
+
 function M.toggle_compare(opts)
   return require("git_tools.view").toggle(opts)
 end
+
 function M.diffthis(revision)
   return M.compare({ path = vim.api.nvim_buf_get_name(0), from = revision, include_unchanged = true })
 end
+
 function M.merge(opts)
   return M.compare(vim.tbl_extend("force", {}, opts or {}, { merge = true }))
 end
@@ -67,6 +70,7 @@ function M.setup(opts)
   else
     buffers.dispose()
   end
+
   commands.create("GitTools", function(command)
     local name = command.fargs[1] or "status"
     local actions = {
@@ -89,19 +93,24 @@ function M.setup(opts)
       unstage_buffer = M.unstage_buffer,
       reset_buffer = M.reset_buffer,
     }
+
     if not actions[name] then
       error("Unknown GitTools action: " .. name)
     end
+
     local args = {}
     if name == "compare" then
-      args.from, args.to = command.fargs[2], command.fargs[3]
+      args.from, args.to = command.fargs[2] or "HEAD~1", command.fargs[3]
     end
+
     if name == "log" then
       args.rev = command.fargs[2]
     end
+
     if command.range > 0 then
       args.range = { command.line1, command.line2 }
     end
+
     actions[name](args)
   end, {
     nargs = "*",

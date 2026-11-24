@@ -100,6 +100,7 @@ for layout in layouts:
             send("\x1b[21~")  # F10: native comparison tab
             native = snapshot(lambda v: "view" in v)["view"]
             assert abs(native["widths"][0] - native["widths"][1]) <= 1, native
+            assert native["columns"][0] < native["columns"][1] < native["columns"][2], native
             assert "Index" in native["titles"][0] and "Working tree" in native["titles"][1], native
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 56, 140, 0, 0))
             os.kill(child.pid, signal.SIGWINCH)

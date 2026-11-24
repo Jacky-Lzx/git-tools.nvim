@@ -80,11 +80,13 @@ vim.keymap.set({ "n", "i" }, "<F12>", function()
       screen = {},
       widths = {},
       titles = {},
+      columns = { api.nvim_win_get_position(view.panel_win)[2] },
     }
     for _, win in ipairs(view.windows) do
       table.insert(result.view.wrap, vim.wo[win].wrap)
       table.insert(result.view.screen, screen(win))
       table.insert(result.view.widths, api.nvim_win_get_width(win))
+      table.insert(result.view.columns, api.nvim_win_get_position(win)[2])
       table.insert(
         result.view.titles,
         api.nvim_eval_statusline(vim.wo[win].winbar, { winid = win, use_winbar = true }).str

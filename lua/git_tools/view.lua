@@ -322,26 +322,15 @@ function View:layout(merge)
       end
     end
     self.windows, self.merge = {}, merge
-    api.nvim_set_current_win(self.panel_win)
-    vim.cmd("rightbelow vnew")
-    self.windows[1] = api.nvim_get_current_win()
-    vim.bo.buftype = "nofile"
-    vim.bo.bufhidden = "wipe"
-    vim.bo.buflisted = false
-    vim.cmd("rightbelow vnew")
-    self.windows[2] = api.nvim_get_current_win()
-    vim.bo.buftype = "nofile"
-    vim.bo.bufhidden = "wipe"
-    vim.bo.buflisted = false
-    if merge then
-      vim.cmd("rightbelow vnew")
-      self.windows[3] = api.nvim_get_current_win()
-      vim.bo.buftype = "nofile"
-      vim.bo.bufhidden = "wipe"
-      vim.bo.buflisted = false
-    end
-    for _, win in ipairs(self.windows) do
+    -- Buffer and window autocmds may change focus as the panes open.
+    local anchor = self.panel_win
+    for index = 1, merge and 3 or 2 do
+      local buf = api.nvim_create_buf(false, true)
+      vim.bo[buf].bufhidden = "wipe"
+      local win = api.nvim_open_win(buf, false, { win = anchor, split = "right" })
+      self.windows[index] = win
       vim.wo[win].winfixwidth = false
+      anchor = win
     end
     self:resize()
   end
@@ -363,17 +352,21 @@ function View:layout(merge)
   self:decorate_panel()
   vim.wo[self.panel_win].winbar = " Files (" .. #self.items .. ")"
 end
+
 function View:select(index, keep_focus)
   if not self:alive() then
     return
   end
+
   local item = self.items[index]
   if not item then
     return
   end
+
   if self.selection_task then
     self.selection_task:close()
   end
+
   local task = git.task()
   self.selection_task = task
   self.selection_index = index
@@ -657,6 +650,7 @@ function M.open(opts)
     origin_tab = api.nvim_get_current_tabpage(),
   }, View)
   M.active[view] = true
+
   git.discover(view.task, opts, function(err, repo)
     if err then
       git.notify(err)
@@ -723,6 +717,7 @@ function M.open(opts)
   end)
   return view
 end
+
 function M.toggle(opts)
   for view in pairs(M.active) do
     if view.tab == api.nvim_get_current_tabpage() then
@@ -732,6 +727,7 @@ function M.toggle(opts)
   end
   return M.open(opts)
 end
+
 function M.dispose()
   for _, view in ipairs(vim.tbl_keys(M.active)) do
     view:close()
