@@ -1,5 +1,6 @@
 local root = assert(vim.env.GIT_TOOLS_ROOT)
 vim.opt.rtp:prepend(root)
+dofile(root .. "/tests/minimal_init.lua")
 vim.opt.rtp:prepend(root .. "/../selection-tools.nvim")
 vim.o.swapfile = false
 vim.cmd.enew()

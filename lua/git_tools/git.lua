@@ -2,66 +2,32 @@
 local M = {}
 
 function M.task()
-  local task = { cancelled = false, processes = {} }
-
-  function task:close()
-    self.cancelled = true
-    for process in pairs(self.processes) do
-      if not process:is_closing() then
-        process:kill(15)
-      end
-    end
-
-    self.processes = {}
-  end
-
-  return task
+  return require("base_tools.process").new()
 end
 
 function M.run(task, cwd, args, callback, opts)
-  if task.cancelled then
-    return
-  end
-
   opts = opts or {}
   local argv = { "git", "--no-pager", "-c", "core.quotepath=false" }
   vim.list_extend(argv, args)
 
-  local process
-  local ok, result = pcall(vim.system, argv, {
+  task:run(argv, {
     cwd = cwd,
     stdin = opts.stdin,
     timeout = opts.timeout or 10000,
     env = { GIT_TERMINAL_PROMPT = "0", GIT_LITERAL_PATHSPECS = "1", GIT_OPTIONAL_LOCKS = "0", LC_ALL = "C" },
-  }, function(output)
-    vim.schedule(function()
-      if process then
-        task.processes[process] = nil
-      end
+  }, function(output, launch_error)
+    if launch_error then
+      callback(launch_error, "", -1)
+      return
+    end
 
-      if task.cancelled then
-        return
-      end
+    local err = output.code ~= 0 and ((output.stderr or ""):gsub("%s+$", "")) or nil
+    if err == "" then
+      err = "git exited with code " .. output.code
+    end
 
-      local err = output.code ~= 0 and ((output.stderr or ""):gsub("%s+$", "")) or nil
-      if err == "" then
-        err = "git exited with code " .. output.code
-      end
-
-      callback(err, output.stdout or "", output.code)
-    end)
+    callback(err, output.stdout or "", output.code)
   end)
-
-  if ok then
-    process = result
-    task.processes[process] = true
-  else
-    vim.schedule(function()
-      if not task.cancelled then
-        callback(tostring(result), "", -1)
-      end
-    end)
-  end
 end
 
 function M.discover(task, opts, callback)
