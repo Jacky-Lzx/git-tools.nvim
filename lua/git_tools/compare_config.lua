@@ -1,3 +1,4 @@
+local keymaps = require("base_tools.keymap")
 local M = {}
 
 local default_keys = { open = "<CR>", next_file = "<Tab>", refresh = "R", close = "q" }
@@ -9,46 +10,29 @@ local actions = {
 }
 M.actions = actions
 
-local function resolve_binding(lhs, value)
-  local chain = type(value) == "table" and value or { value }
-  local entries = {}
-  for index, action in pairs(chain) do
-    if index ~= "desc" then
-      entries[index] = action
-    end
-  end
-  local prefix = "compare.keymap.panel[" .. lhs .. "]"
-  assert(vim.islist(entries) and #entries > 0, prefix .. " must contain a nonempty action list")
-  assert(chain.desc == nil or type(chain.desc) == "string" and chain.desc ~= "", prefix .. ".desc must be nonempty")
-
-  local primary
+local function describe_binding(binding)
+  local prefix = "compare.keymap.panel[" .. binding.lhs .. "]"
+  assert(#binding.actions > 0, prefix .. " must contain a nonempty action list")
+  assert(binding.desc ~= "", prefix .. ".desc must be nonempty")
   local hints = {}
-  for _, action in ipairs(entries) do
+  for _, action in ipairs(binding.actions) do
     if type(action) == "function" then
       hints[#hints + 1] = "custom action"
     else
-      local spec = actions[action]
-      assert(spec, prefix .. ": unknown action " .. tostring(action))
-      primary = primary or action
-      hints[#hints + 1] = spec.hint
+      binding.primary = binding.primary or action
+      hints[#hints + 1] = actions[action].hint
     end
   end
-  local hint = chain.desc or table.concat(hints, " / ")
-  local desc = chain.desc or (#entries == 1 and primary and actions[primary].desc) or "Git compare: " .. hint
-  return { lhs = lhs, actions = entries, primary = primary, hint = hint, desc = desc }
+  binding.hint = binding.desc or table.concat(hints, " / ")
+  binding.desc = binding.desc
+    or (#binding.actions == 1 and binding.primary and actions[binding.primary].desc)
+    or "Git compare: " .. binding.hint
 end
 
-local function resolve_panel(keymap)
-  assert(type(keymap) == "table", "compare.keymap.panel must be a table")
-  local bindings, used = {}, {}
-  for lhs, value in pairs(keymap) do
-    assert(type(lhs) == "string" and lhs ~= "", "compare.keymap.panel keys must be nonempty strings")
-    if value ~= false then
-      local key = vim.keycode(lhs)
-      assert(not used[key], "compare.keymap.panel: duplicate mapping " .. lhs)
-      used[key] = true
-      bindings[#bindings + 1] = resolve_binding(lhs, value)
-    end
+local function resolve_panel(spec)
+  local bindings = keymaps.resolve(spec, { name = "compare.keymap.panel", actions = actions, check_aliases = true })
+  for _, binding in ipairs(bindings) do
+    describe_binding(binding)
   end
   table.sort(bindings, function(a, b)
     local left = a.primary and actions[a.primary].order or 5

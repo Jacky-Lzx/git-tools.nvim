@@ -10,7 +10,8 @@
   },
   "requires": [
     "path:{root}/../base-tools.nvim/lua/base_tools/user_command.lua",
-    "path:{root}/../base-tools.nvim/lua/base_tools/process.lua"
+    "path:{root}/../base-tools.nvim/lua/base_tools/process.lua",
+    "path:{root}/../base-tools.nvim/lua/base_tools/keymap.lua"
   ],
   "cases": [
     {
@@ -670,7 +671,7 @@
   "fixtures": {
     "base-tools.nvim": {
       "repository": "Jacky-Lzx/base-tools.nvim",
-      "revision": "2ce4553d92e5ea5382fbedb06e29906b6e505c34",
+      "revision": "951deeaaf28badfec5dbbd2b27107cea329f54c0",
       "path": "{root}/../base-tools.nvim"
     },
     "selection-tools.nvim": {

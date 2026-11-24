@@ -1,4 +1,5 @@
 local api = vim.api
+local keymaps = require("base_tools.keymap")
 local git, repository = require("git_tools.git"), require("git_tools.repository")
 local compare = require("git_tools.compare_config")
 local tree = require("git_tools.view_tree")
@@ -146,31 +147,15 @@ function View:alive()
 end
 function View:map(buf, lhs, callback, desc)
   self.maps[buf] = self.maps[buf] or {}
-  if self.maps[buf][lhs] == nil then
-    self.maps[buf][lhs] =
-      { previous = api.nvim_buf_call(buf, function()
-        return vim.fn.maparg(lhs, "n", false, true)
-      end) }
-  end
-  vim.keymap.set("n", lhs, callback, { buffer = buf, silent = true, desc = desc })
-  self.maps[buf][lhs].installed = api.nvim_buf_call(buf, function()
-    return vim.fn.maparg(lhs, "n", false, true)
-  end)
+  self:unmap(buf, lhs)
+  self.maps[buf][lhs] = keymaps.install("n", lhs, callback, { buffer = buf, silent = true, desc = desc })
 end
 function View:unmap(buf, lhs)
-  local record = self.maps[buf][lhs]
-  if api.nvim_buf_is_valid(buf) then
-    api.nvim_buf_call(buf, function()
-      local current = vim.fn.maparg(lhs, "n", false, true)
-      if vim.deep_equal(current, record.installed) then
-        vim.keymap.del("n", lhs, { buffer = buf })
-        if next(record.previous) and record.previous.buffer == 1 then
-          vim.fn.mapset("n", false, record.previous)
-        end
-      end
-    end)
+  local cleanup = self.maps[buf][lhs]
+  if cleanup then
+    self.maps[buf][lhs] = nil
+    cleanup()
   end
-  self.maps[buf][lhs] = nil
 end
 function View:next_file()
   if self.panel_items ~= self.items then
