@@ -1,4 +1,5 @@
 local api = vim.api
+local scratch_buffer = require("base_tools.buffer").scratch
 local keymaps = require("base_tools.keymap")
 local git, repository = require("git_tools.git"), require("git_tools.repository")
 local compare = require("git_tools.compare_config")
@@ -127,9 +128,7 @@ function M.blob(task, repo, revision, path, callback)
 end
 
 local function scratch(text, name, path)
-  local buf = api.nvim_create_buf(false, true)
-  vim.bo[buf].bufhidden = "wipe"
-  vim.bo[buf].swapfile = false
+  local buf = scratch_buffer({ bufhidden = "wipe" })
   api.nvim_buf_set_name(buf, "git-tools://" .. buf .. "/" .. name .. "/" .. path)
   local parsed = require("git_tools.hunks").text(text)
   if text:find("\0", 1, true) then
@@ -479,8 +478,7 @@ function View:layout(merge)
     -- Buffer and window autocmds may change focus as the panes open.
     local anchor = self.panel_win
     for index = 1, merge and 3 or 2 do
-      local buf = api.nvim_create_buf(false, true)
-      vim.bo[buf].bufhidden = "wipe"
+      local buf = scratch_buffer({ bufhidden = "wipe" })
       local win = api.nvim_open_win(buf, false, { win = anchor, split = "right" })
       self.windows[index] = win
       vim.wo[win].winfixwidth = false

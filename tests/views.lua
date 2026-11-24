@@ -97,9 +97,11 @@ tab_mapping()()
 wait(function()
   return view.current.kind == "unstaged"
 end)
+local snapshot = api.nvim_win_get_buf(view.windows[1])
 local actual = view.result
 api.nvim_buf_set_lines(actual, 0, -1, false, { "unsaved" })
 view:close()
+assert(not api.nvim_buf_is_valid(snapshot), "Closing diff must wipe the temporary snapshot")
 assert(api.nvim_buf_is_valid(actual) and vim.bo[actual].modified, "Closing diff must preserve unsaved file buffer")
 assert(vim.fn.maparg("q", "n", false, true).buffer ~= 1, "View mappings must be released")
 assert(api.nvim_buf_call(working, tab_mapping) == original_tab, "Closing compare must preserve the prior Tab mapping")
