@@ -13,8 +13,9 @@ CONTENTS                                                           *git-tools*
 ==============================================================================
 QUICK START                                             *git-tools-quickstart*
 
-Requires Neovim 0.10+. Git workflows require Git. Pickers use optional
-selection-tools.nvim; delta and Lazygit are optional.
+Requires Neovim 0.12+ and base-tools.nvim on 'runtimepath'. Git workflows
+require Git. Pickers use optional selection-tools.nvim. Delta and Lazygit
+are optional.
 
 >lua
     require("git_tools").setup({})

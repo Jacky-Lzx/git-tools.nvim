@@ -1,4 +1,5 @@
 vim.opt.rtp:prepend(assert(vim.env.GIT_TOOLS_ROOT))
+dofile(vim.env.GIT_TOOLS_ROOT .. "/tests/minimal_init.lua")
 local selection = vim.env.SELECTION_TOOLS_DIR or vim.env.GIT_TOOLS_ROOT .. "/../selection-tools.nvim"
 if vim.fn.isdirectory(selection) == 1 then
   vim.opt.rtp:append(selection)

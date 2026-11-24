@@ -12,7 +12,7 @@ Git workflows and reusable text diff generation and rendering.
 
 ## Requirements
 
-Neovim **0.10+**. Git workflows require Git. Pickers use optional selection-tools.nvim; delta and Lazygit are optional.
+Neovim **0.12+** and `Jacky-Lzx/base-tools.nvim` are required. Git workflows require Git. Pickers use optional selection-tools.nvim. Delta and Lazygit are optional.
 
 ## Installation
 
@@ -22,12 +22,12 @@ With lazy.nvim:
 {
   "Jacky-Lzx/git-tools.nvim",
   main = "git_tools",
-  dependencies = { "Jacky-Lzx/selection-tools.nvim" },
+  dependencies = { "Jacky-Lzx/base-tools.nvim", "Jacky-Lzx/selection-tools.nvim" },
   opts = {},
 }
 ```
 
-Or put this repository and its required dependencies on `runtimepath`, then call:
+Or put this repository and `base-tools.nvim` on `runtimepath`, then call:
 
 ```lua
 require("git_tools").setup({})

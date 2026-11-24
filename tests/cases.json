@@ -5,8 +5,12 @@
   ],
   "defaults": {
     "GIT_TOOLS_ROOT": "{root}",
+    "BASE_TOOLS_PATH": "{root}/../base-tools.nvim",
     "SELECTION_TOOLS_DIR": "{root}/../selection-tools.nvim"
   },
+  "requires": [
+    "path:{root}/../base-tools.nvim/lua/base_tools/user_command.lua"
+  ],
   "cases": [
     {
       "name": "docs",
@@ -41,7 +45,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-i",
         "NONE",
         "--noplugin",
@@ -60,7 +64,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-i",
         "NONE",
         "--noplugin",
@@ -79,7 +83,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-i",
         "NONE",
         "--noplugin",
@@ -367,7 +371,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -386,7 +390,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -652,6 +656,7 @@
     }
   ],
   "support": {
+    "tests/minimal_init.lua": "Mounts base-tools.nvim for tests that register Git commands",
     "tests/wrap_tui.lua": "Loaded by tests/wrap_tui.py",
     "tests/tui.lua": "Loaded by tests/tui.py",
     "tests/native_tui.lua": "Loaded by tests/native_tui.py",
@@ -662,6 +667,11 @@
     "tests/lazygit_theme_tui.lua": "Interactive real LazyGit/delta acceptance; requires theme-tools and an actual terminal"
   },
   "fixtures": {
+    "base-tools.nvim": {
+      "repository": "Jacky-Lzx/base-tools.nvim",
+      "revision": "597026feeed61f62f65411676202730a976fcd89",
+      "path": "{root}/../base-tools.nvim"
+    },
     "selection-tools.nvim": {
       "repository": "Jacky-Lzx/selection-tools.nvim",
       "revision": "6685844c034e1cab37de786ebbc1d0e673a87196",

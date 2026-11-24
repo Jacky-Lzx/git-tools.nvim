@@ -1,8 +1,9 @@
 # Testing
 
-Run from any directory with `sh /path/to/checkout/tests/run.sh`. Python 3.9+
-and Neovim are required; `NVIM_BIN` selects the executable (`NVIM` is an RPC
-address inside Neovim jobs and is not an executable override).
+Run from any directory with `sh /path/to/checkout/tests/run.sh`. Tests require
+Python 3.9+, Neovim 0.12+ and a sibling checkout of `base-tools.nvim`.
+Use `NVIM_BIN` to select the Neovim executable. Neovim jobs use `NVIM` as an
+RPC address.
 
 ```sh
 sh tests/run.sh                     # Default offline suites

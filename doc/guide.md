@@ -7,7 +7,7 @@ The examples here illustrate particular workflows.
 
 ## Installation details
 
-- Neovim 0.10+ APIs; currently validated with Neovim 0.12.6.
+- Neovim 0.12+ and base-tools.nvim on `runtimepath`.
 - Native Lua previews by default, with optional theme-tools.nvim palette sync.
 - Optional `delta` for ANSI rendering; unavailable or failed delta falls back
   to the native renderer.
@@ -20,6 +20,7 @@ This repository is currently a local plugin. With lazy.nvim:
   "Jacky-Lzx/git-tools.nvim",
   name = "git-tools.nvim",
   main = "git_tools",
+  dependencies = { "Jacky-Lzx/base-tools.nvim" },
   lazy = true,
 }
 ```

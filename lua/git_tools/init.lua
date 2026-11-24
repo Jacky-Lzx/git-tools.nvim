@@ -59,6 +59,7 @@ function M.setup(opts)
   local diff_options = window.resolve(opts.diff or {})
   local terminal_options = lazygit.resolve(opts.lazygit or {})
   local buffer_options = opts.buffer ~= false and buffers.resolve(opts.buffer) or nil
+  local commands = require("git_tools.user_command")
   window.configure(diff_options)
   lazygit.configure(terminal_options)
   if buffer_options then
@@ -66,7 +67,7 @@ function M.setup(opts)
   else
     buffers.dispose()
   end
-  require("git_tools.user_command").create("GitTools", function(command)
+  commands.create("GitTools", function(command)
     local name = command.fargs[1] or "status"
     local actions = {
       status = M.status,
@@ -105,7 +106,6 @@ function M.setup(opts)
   end, {
     nargs = "*",
     range = true,
-    force = true,
     complete = function()
       return {
         "status",
