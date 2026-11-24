@@ -11,7 +11,9 @@
   "requires": [
     "path:{root}/../base-tools.nvim/lua/base_tools/user_command.lua",
     "path:{root}/../base-tools.nvim/lua/base_tools/process.lua",
-    "path:{root}/../base-tools.nvim/lua/base_tools/keymap.lua"
+    "path:{root}/../base-tools.nvim/lua/base_tools/keymap.lua",
+    "path:{root}/../base-tools.nvim/lua/base_tools/color.lua",
+    "path:{root}/../base-tools.nvim/lua/base_tools/highlight.lua"
   ],
   "cases": [
     {
@@ -142,7 +144,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -161,7 +163,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -180,7 +182,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -199,7 +201,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -218,7 +220,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -237,7 +239,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -297,7 +299,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -430,7 +432,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -509,7 +511,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
@@ -658,7 +660,7 @@
     }
   ],
   "support": {
-    "tests/minimal_init.lua": "Mounts base-tools.nvim for command registration and Git subprocesses",
+    "tests/minimal_init.lua": "Mounts base-tools.nvim for tests that use its modules",
     "tests/wrap_tui.lua": "Loaded by tests/wrap_tui.py",
     "tests/tui.lua": "Loaded by tests/tui.py",
     "tests/native_tui.lua": "Loaded by tests/native_tui.py",
@@ -671,7 +673,7 @@
   "fixtures": {
     "base-tools.nvim": {
       "repository": "Jacky-Lzx/base-tools.nvim",
-      "revision": "951deeaaf28badfec5dbbd2b27107cea329f54c0",
+      "revision": "9992aa665f955dec66a0b1012ef05ed31bf6af46",
       "path": "{root}/../base-tools.nvim"
     },
     "selection-tools.nvim": {

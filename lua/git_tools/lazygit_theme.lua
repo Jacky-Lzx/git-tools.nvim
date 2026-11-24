@@ -7,15 +7,6 @@ local catppuccin_syntax = {
   macchiato = "Catppuccin Macchiato",
 }
 
-local function mix(fg, bg, amount)
-  local result = "#"
-  for _, offset in ipairs({ 2, 4, 6 }) do
-    local a, b = tonumber(fg:sub(offset, offset + 1), 16), tonumber(bg:sub(offset, offset + 1), 16)
-    result = result .. string.format("%02x", math.floor(a * amount + b * (1 - amount) + 0.5))
-  end
-  return result
-end
-
 local function config(c)
   local ui, p = c.ui, c.palette
   local theme = {
@@ -121,13 +112,14 @@ local function delta(path, cwd)
 end
 
 local function delta_script(command, c, syntax)
+  local color = require("base_tools.color")
   local p, ui, git = c.palette, c.ui, c.git
   local styles = {
     ["syntax-theme"] = syntax,
-    ["minus-style"] = "syntax " .. mix(git.delete, p.bg, 0.13),
-    ["plus-style"] = "syntax " .. mix(git.add, p.bg, 0.10),
-    ["minus-emph-style"] = "bold syntax " .. mix(git.delete, p.bg, 0.50),
-    ["plus-emph-style"] = "bold syntax " .. mix(git.add, p.bg, 0.48),
+    ["minus-style"] = "syntax " .. color.hex(color.mix(git.delete, p.bg, 0.13)),
+    ["plus-style"] = "syntax " .. color.hex(color.mix(git.add, p.bg, 0.10)),
+    ["minus-emph-style"] = "bold syntax " .. color.hex(color.mix(git.delete, p.bg, 0.50)),
+    ["plus-emph-style"] = "bold syntax " .. color.hex(color.mix(git.add, p.bg, 0.48)),
     ["minus-non-emph-style"] = "minus-style",
     ["plus-non-emph-style"] = "plus-style",
     ["zero-style"] = "syntax normal",

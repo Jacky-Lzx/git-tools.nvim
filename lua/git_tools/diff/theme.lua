@@ -2,41 +2,25 @@ local M = {}
 local initialized, subscribed = false, false
 local api = vim.api
 
-local function color(name, field)
-  local seen = {}
-  while name and not seen[name] do
-    seen[name] = true
-    local hl = api.nvim_get_hl(0, { name = name, link = true, create = false })
-    if not hl.link then
-      return hl[field] and string.format("#%06x", hl[field]) or nil
-    end
-    name = hl.link
-  end
-end
+local color = require("base_tools.color")
+local highlight = require("base_tools.highlight")
 
-local function mix(fg, bg, amount)
-  local function channel(value, offset)
-    return tonumber(value:sub(offset, offset + 1), 16)
-  end
-  local result = "#"
-  for _, offset in ipairs({ 2, 4, 6 }) do
-    result = result
-      .. string.format("%02x", math.floor(channel(fg, offset) * amount + channel(bg, offset) * (1 - amount) + 0.5))
-  end
-  return result
+local function highlight_color(name, field)
+  local value = highlight.resolve(name)[field]
+  return value and color.hex(value) or nil
 end
 
 local function apply(c)
   local bg = c.palette.bg
   -- Keep syntax foregrounds intact, including themes whose DiffAdd uses reverse.
   local groups = {
-    Add = { bg = mix(c.git.add, bg, 0.10) },
-    Delete = { bg = mix(c.git.delete, bg, 0.13) },
-    Change = { bg = mix(c.ui.accent, bg, 0.08) },
-    Text = { bg = mix(c.ui.accent, bg, 0.24), bold = true },
+    Add = { bg = color.mix(c.git.add, bg, 0.10) },
+    Delete = { bg = color.mix(c.git.delete, bg, 0.13) },
+    Change = { bg = color.mix(c.ui.accent, bg, 0.08) },
+    Text = { bg = color.mix(c.ui.accent, bg, 0.24), bold = true },
     Filler = { fg = c.ui.muted, bg = bg },
-    AddText = { bg = mix(c.git.add, bg, 0.48), bold = true, underline = true },
-    DeleteText = { bg = mix(c.git.delete, bg, 0.50), bold = true, underline = true },
+    AddText = { bg = color.mix(c.git.add, bg, 0.48), bold = true, underline = true },
+    DeleteText = { bg = color.mix(c.git.delete, bg, 0.50), bold = true, underline = true },
     AddNumber = { fg = c.git.add },
     DeleteNumber = { fg = c.git.delete },
     Number = { fg = c.ui.muted },
@@ -64,24 +48,24 @@ local function apply(c)
 end
 
 local function fallback()
-  local normal_bg = color("Normal", "bg")
+  local normal_bg = highlight_color("Normal", "bg")
   local light = vim.o.background == "light"
   apply({
     palette = { bg = normal_bg or (light and "#ffffff" or "#14161b") },
     ui = {
-      fg = color("Normal", "fg") or (light and "#14161b" or "#e0e2ea"),
+      fg = highlight_color("Normal", "fg") or (light and "#14161b" or "#e0e2ea"),
       sidebar_bg = normal_bg or "NONE",
-      cursorline_bg = color("CursorLine", "bg") or "NONE",
-      muted = color("Comment", "fg") or "#808080",
-      border = color("FloatBorder", "fg") or "#808080",
-      accent = color("Function", "fg") or "#61afef",
+      cursorline_bg = highlight_color("CursorLine", "bg") or "NONE",
+      muted = highlight_color("Comment", "fg") or "#808080",
+      border = highlight_color("FloatBorder", "fg") or "#808080",
+      accent = highlight_color("Function", "fg") or "#61afef",
     },
     git = {
-      add = color("Added", "fg") or color("diffAdded", "fg") or "#98c379",
-      change = color("Changed", "fg") or color("diffChanged", "fg") or "#d7ba7d",
-      delete = color("Removed", "fg") or color("diffRemoved", "fg") or "#e05f65",
+      add = highlight_color("Added", "fg") or highlight_color("diffAdded", "fg") or "#98c379",
+      change = highlight_color("Changed", "fg") or highlight_color("diffChanged", "fg") or "#d7ba7d",
+      delete = highlight_color("Removed", "fg") or highlight_color("diffRemoved", "fg") or "#e05f65",
     },
-    diagnostic = { error = color("DiagnosticError", "fg") or "#e05f65" },
+    diagnostic = { error = highlight_color("DiagnosticError", "fg") or "#e05f65" },
   })
 end
 
@@ -113,16 +97,10 @@ end
 
 local function window_highlights(win, mappings)
   M.setup()
-  local entries = {}
-  for entry in vim.wo[win].winhighlight:gmatch("[^,]+") do
-    if not mappings[entry:match("^([^:]+):")] then
-      entries[#entries + 1] = entry
-    end
-  end
-  for source, target in pairs(mappings) do
-    entries[#entries + 1] = source .. ":" .. target
-  end
-  vim.wo[win].winhighlight = table.concat(entries, ",")
+  api.nvim_win_call(win, function()
+    -- Keep the mappings when the comparison pane switches buffers.
+    vim.opt.winhighlight:append(mappings)
+  end)
 end
 
 function M.window(win)

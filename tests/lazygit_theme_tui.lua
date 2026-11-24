@@ -1,6 +1,7 @@
 -- Optional end-to-end check against real LazyGit/delta in Neovim's PTY.
 local root = vim.env.GIT_TOOLS_ROOT or vim.fn.getcwd()
 vim.opt.rtp:prepend(root)
+dofile(root .. "/tests/minimal_init.lua")
 local theme_root = vim.fs.dirname(root) .. "/theme-tools.nvim"
 if vim.fn.isdirectory(theme_root) == 0 or vim.fn.executable("lazygit") ~= 1 or vim.fn.executable("delta") ~= 1 then
   print("SKIP real LazyGit theme PTY (requires LazyGit, delta and sibling theme-tools)")
