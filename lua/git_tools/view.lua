@@ -389,6 +389,7 @@ function View:layout(merge)
     self.panel_win = api.nvim_get_current_win()
 
     vim.bo[self.panel].buftype = "nofile"
+    vim.bo[self.panel].buflisted = false
     vim.bo[self.panel].bufhidden = "wipe"
     vim.bo[self.panel].swapfile = false
     api.nvim_buf_set_name(self.panel, "git-tools://" .. self.panel .. "/files")

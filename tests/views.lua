@@ -58,6 +58,7 @@ local function balanced()
   assert(widths[#widths] - widths[1] <= 1, "Diff panes must share available width equally: " .. vim.inspect(widths))
 end
 balanced()
+assert(not vim.bo[view.panel].buflisted, "The Compare file panel must be unlisted")
 assert(not vim.wo[view.panel_win].number and not vim.wo[view.panel_win].relativenumber)
 assert(vim.wo[view.windows[2]].winbar:find("Index", 1, true))
 assert(api.nvim_buf_get_lines(view.panel, 0, 1, false)[1] == " S  a.txt")
