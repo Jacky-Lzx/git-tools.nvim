@@ -149,16 +149,66 @@ git_tools.compare(opts) / toggle_compare(opts)             *git-tools-compare*
     staged=true filters index changes; path restricts files.
         diffthis(revision)
     selects the current file. Return view:select(index), :refresh(), :close().
-    The panel groups changes by directory. Enter opens a file or folds a
-    directory; R refreshes. Tab advances through visible files in either the
-    panel or a diff pane. <leader>gp returns to the panel.
-    q closes. Working buffers and unsaved edits are retained on close.
+    The Files panel groups changes by directory. Its default keymap binds
+    <CR> to "open" (open a file or toggle a directory), <Tab> to "next_file"
+    (advance through visible files), R to "refresh", and q to "close".
+    See |git-tools-compare-keymap| to customize it.
+    In diff panes, Tab advances and q closes. <leader>gp returns to the
+    panel. Working buffers and unsaved edits are retained on close.
     wrap=true enables wrapping; Alt+Z toggles all comparison/merge panes.
     setup({diff={wrap=true}}) sets the default; per-call wrap=false overrides
         it.
     The toggle persists across file changes and refreshes until the view
         closes.
     Revision/index snapshots are read-only. History picker C-d opens a commit.
+
+Compare panel keymap                                  *git-tools-compare-keymap*
+
+    `compare.keymap.panel` replaces the default normal-mode Files mappings
+    for newly opened views. Omit it to use defaults. Use {} for no mappings
+    or assign false to skip a key in a copied keymap. The older
+    `compare.panel_keys` action-to-key overrides are used when
+    `compare.keymap.panel` is omitted.
+
+    Each key accepts a named action, function(ctx), or a list of them.
+    Actions are tried in order. true stops the chain; false or nil tries the
+    next entry. A named action that starts an asynchronous operation returns
+    true once the request is accepted. A list may include desc to set the
+    mapping description and panel hint.
+
+    ctx.root is the repository root. ctx.tab, ctx.win and ctx.buf identify
+    the compare tab and Files window/buffer. ctx.row is a snapshot of the
+    cursor row or nil. It contains a repository-relative path and a kind of
+    "file" or "directory". Directory rows contain collapsed; file rows
+    contain item. ctx.current is the snapshot of the change shown in the
+    diff, or nil. Both item and current contain path, kind (the change
+    category), and file, with old_path and status when available.
+    Call ctx.run(action) to run a named action and get its handled result.
+
+>lua
+    require("git_tools").setup({
+      compare = {
+        keymap = {
+          panel = {
+            ["<CR>"] = "open",
+            ["<Tab>"] = "next_file",
+            R = "refresh",
+            q = "close",
+            y = {
+              function(ctx)
+                if not ctx.row then
+                  return false
+                end
+                vim.fn.setreg('"', ctx.row.path)
+                return true
+              end,
+              desc = "Copy repository-relative path",
+            },
+          },
+        },
+      },
+    })
+<
 
 git_tools.merge(opts)                                        *git-tools-merge*
     Conflicted files in three columns: ours, editable result, theirs. Result:
@@ -332,8 +382,9 @@ are copied before use. Invalid configuration types do not replace live
 handlers or commands. Repeating setup must not accumulate automatic
 registrations.
 
-Setup validates buffer, diff and terminal configuration before applying fresh
-default-based options. `buffer = false` releases existing buffer observers.
+Setup validates buffer, compare, diff and terminal configuration before
+applying fresh default-based options. `buffer = false` releases existing
+buffer observers.
 `dispose()` cancels buffer/view work, closes owned views/terminal resources,
 releases unchanged owned mappings/commands and resets module options. Modified
 user content is not force-closed; blocked views still release background work.

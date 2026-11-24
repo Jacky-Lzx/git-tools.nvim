@@ -1,5 +1,6 @@
 local api = vim.api
 local git, repository = require("git_tools.git"), require("git_tools.repository")
+local compare = require("git_tools.compare_config")
 local tree = require("git_tools.view_tree")
 local M = { active = {} }
 local View = {}
@@ -24,6 +25,11 @@ end
 
 local function bar(text)
   return text:gsub("%%", "%%%%"):gsub("[\r\n]", " ")
+end
+
+local panel_key_labels = { ["<CR>"] = "Enter", ["<Tab>"] = "Tab" }
+local function panel_key_hint(lhs, label)
+  return (panel_key_labels[lhs] or vim.fn.strtrans(lhs)) .. ": " .. vim.fn.strtrans(label)
 end
 
 function View:resize()
@@ -175,8 +181,7 @@ function View:next_file()
   for offset = 1, #rows do
     local node = rows[(current + offset - 1) % #rows + 1]
     if node.index and node.index ~= self.selection_index then
-      self:select(node.index, true)
-      return
+      return self:select(node.index, true)
     end
   end
 end
@@ -234,6 +239,7 @@ function View:close()
     end
   end
   self:cleanup()
+  return true
 end
 function View:decorate_panel()
   if not self:alive() or not api.nvim_buf_is_loaded(self.panel) then
@@ -291,7 +297,13 @@ function View:render_panel()
     end
   end
   if #lines == 0 then
-    lines = { "No changed files. R: refresh; q: close" }
+    local hints = {}
+    for _, binding in ipairs(self.panel_keymap) do
+      if binding.primary == "refresh" or binding.primary == "close" then
+        hints[#hints + 1] = panel_key_hint(binding.lhs, binding.hint)
+      end
+    end
+    lines = { "No changed files." .. (#hints > 0 and " " .. table.concat(hints, "; ") or "") }
   end
   vim.bo[self.panel].modifiable = true
   api.nvim_buf_set_lines(self.panel, 0, -1, false, lines)
@@ -302,12 +314,15 @@ function View:render_panel()
   vim.wo[self.panel_win].winbar = " Files (" .. #self.items .. ")"
 end
 
-function View:open_panel_row()
-  if self.panel_items ~= self.items then
-    return
+function View:panel_row()
+  if self.panel_items == self.items then
+    local row = api.nvim_win_get_cursor(self.panel_win)[1]
+    return self.panel_rows[row], row
   end
-  local row = api.nvim_win_get_cursor(self.panel_win)[1]
-  local node = self.panel_rows[row]
+end
+
+function View:open_panel_row()
+  local node, row = self:panel_row()
   if not node then
     return
   end
@@ -315,8 +330,71 @@ function View:open_panel_row()
     self.collapsed[node.path] = not self.collapsed[node.path] or nil
     self:render_panel()
     api.nvim_win_set_cursor(self.panel_win, { row, 0 })
-  else
-    self:select(node.index)
+    return true
+  end
+  return self:select(node.index)
+end
+
+local function change_snapshot(item)
+  if item then
+    return {
+      path = item.path,
+      old_path = item.old_path,
+      file = item.file,
+      kind = item.kind,
+      status = item.status,
+    }
+  end
+end
+
+function View:run_panel_action(action)
+  local spec = compare.actions[action]
+  assert(spec, "Unknown Git compare panel action: " .. tostring(action))
+  if not self:alive() or not api.nvim_win_is_valid(self.panel_win) then
+    return false
+  end
+  return self[spec.method](self) == true
+end
+
+function View:panel_context()
+  local node = self:panel_row()
+  local row
+  if node then
+    row = { path = node.path, kind = node.children and "directory" or "file" }
+    if node.children then
+      row.collapsed = self.collapsed[node.path] == true
+    else
+      row.item = change_snapshot(self.items[node.index])
+    end
+  end
+
+  return {
+    root = self.repo.root,
+    tab = self.tab,
+    win = self.panel_win,
+    buf = self.panel,
+    row = row,
+    current = change_snapshot(self.current),
+    run = function(action)
+      return self:run_panel_action(action)
+    end,
+  }
+end
+
+function View:run_panel_binding(binding)
+  for _, action in ipairs(binding.actions) do
+    if not self:alive() or not api.nvim_win_is_valid(self.panel_win) then
+      return
+    end
+    local handled
+    if type(action) == "function" then
+      handled = action(self:panel_context())
+    else
+      handled = self:run_panel_action(action)
+    end
+    if handled == true then
+      return
+    end
   end
 end
 
@@ -343,7 +421,6 @@ function View:layout(merge)
       spell = false,
       cursorline = true,
       winbar = " Files",
-      statusline = " Enter: open  Tab: next  R: refresh  q: close",
     }
     for name, value in pairs(panel_opts) do
       vim.wo[self.panel_win][name] = value
@@ -395,21 +472,14 @@ function View:layout(merge)
       end,
     })
 
-    self:map(self.panel, "q", function()
-      self:close()
-    end, "Close Git diff view")
-
-    self:map(self.panel, "<CR>", function()
-      self:open_panel_row()
-    end, "Open file diff or toggle folder")
-
-    self:map(self.panel, "<Tab>", function()
-      self:next_file()
-    end, "Show next changed file")
-
-    self:map(self.panel, "R", function()
-      self:refresh()
-    end, "Refresh Git diff view")
+    local hints = {}
+    for _, binding in ipairs(self.panel_keymap) do
+      self:map(self.panel, binding.lhs, function()
+        self:run_panel_binding(binding)
+      end, binding.desc)
+      hints[#hints + 1] = panel_key_hint(binding.lhs, binding.hint)
+    end
+    vim.wo[self.panel_win].statusline = #hints > 0 and " " .. bar(table.concat(hints, "  ")) or ""
   end
 
   if self.merge ~= merge or not self.windows then
@@ -599,6 +669,7 @@ function View:select(index, keep_focus)
       publish("")
     end
   end)
+  return true
 end
 function View:resolve(callback)
   if not self.current or self.current.kind ~= "conflict" then
@@ -716,7 +787,7 @@ function View:refresh()
       end
       loaded(nil, items)
     end)
-    return
+    return true
   end
   local args
   if self.opts.commit and not self.from then
@@ -734,12 +805,14 @@ function View:refresh()
   git.run(task, self.repo.root, args, function(err, output)
     loaded(err, not err and M.parse_names(output, self.repo.root) or nil)
   end)
+  return true
 end
 
 function M.open(opts)
   opts = require("git_tools.diff.window").options(opts)
   local view = setmetatable({
     opts = opts,
+    panel_keymap = vim.deepcopy(compare.panel_keymap),
     wrap = opts.wrap,
     task = git.task(),
     maps = {},

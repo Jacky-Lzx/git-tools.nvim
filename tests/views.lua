@@ -244,6 +244,39 @@ fixture:write("lib/core/a.txt", { "index" })
 fixture:git("add", "lib/core/a.txt")
 fixture:write("lib/core/a.txt", { "working" })
 fixture:write("root.txt", { "changed" })
+tools.setup({
+  buffer = false,
+  compare = {
+    keymap = {
+      panel = {
+        Q = "close",
+        o = {
+          function(ctx)
+            assert(ctx.root == fixture.root and api.nvim_win_get_buf(ctx.win) == ctx.buf)
+            if ctx.row.kind == "directory" then
+              assert(ctx.row.item == nil and ctx.row.path == "lib")
+              assert(ctx.current.path == "lib/core/a.txt" or ctx.current.path == "root.txt")
+              return ctx.run("open")
+            end
+            assert(ctx.row.item.kind == "unstaged")
+            ctx.row.item.path = "Changed in the callback"
+          end,
+          "open",
+          function()
+            error("A handled action must stop the binding")
+          end,
+          desc = "open or fold",
+        },
+        ["<C-n>"] = "next_file",
+        ["%"] = "refresh",
+        y = function(ctx)
+          vim.fn.setreg('"', ctx.row.path)
+          return true
+        end,
+      },
+    },
+  },
+})
 view = tools.compare({ cwd = fixture.root })
 wait(function()
   return view.current ~= nil
@@ -254,12 +287,22 @@ end
 assert(vim.deep_equal(panel_lines(), { "▾ lib", "  ▾ core", "     S  a.txt", "     W  a.txt", " W  root.txt" }))
 assert(view.current.path == "lib/core/a.txt" and view.current.kind == "staged")
 api.nvim_set_current_win(view.panel_win)
-local open_row = vim.fn.maparg("<CR>", "n", false, true).callback
+local function panel_mapping(lhs)
+  return vim.fn.maparg(lhs, "n", false, true)
+end
+for _, lhs in ipairs({ "q", "<CR>", "<Tab>", "R" }) do
+  assert(panel_mapping(lhs).buffer ~= 1, "Custom panel keys must replace defaults")
+end
+local hints =
+  api.nvim_eval_statusline(vim.wo[view.panel_win].statusline, { winid = view.panel_win, maxwidth = 120 }).str
+assert(hints == " o: open or fold  <C-n>: next  %: refresh  Q: close  y: custom action")
+assert(panel_mapping("o").desc == "open or fold")
+local open_row = panel_mapping("o").callback
 api.nvim_win_set_cursor(view.panel_win, { 1, 0 })
 open_row()
 assert(vim.deep_equal(panel_lines(), { "▸ lib", " W  root.txt" }))
 assert(view.current.kind == "staged" and text(view.windows[2]) == "index", "Folding must preserve the displayed diff")
-view:refresh()
+panel_mapping("%").callback()
 wait(function()
   return view.current.path == "root.txt"
 end)
@@ -274,6 +317,67 @@ wait(function()
 end)
 assert(text(view.windows[1]) == "index" and text(view.windows[2]) == "working")
 assert(api.nvim_win_get_cursor(view.panel_win)[1] == 4, "Selection must follow the visible file row")
+api.nvim_set_current_win(view.panel_win)
+api.nvim_feedkeys("y", "xt", false)
+assert(vim.fn.getreg('"') == "lib/core/a.txt", "A standalone callback must receive the cursor row")
+panel_mapping("<C-n>").callback()
+wait(function()
+  return view.current.path == "root.txt"
+end)
+panel_mapping("Q").callback()
+assert(view.closed, "Configured close key must close the view")
+
+tools.setup({ buffer = false, compare = { panel_keys = { close = "Q", refresh = false } } })
+view = tools.compare({ cwd = fixture.root, from = "HEAD", to = "HEAD" })
+wait(function()
+  return view.panel ~= nil
+end)
+assert(panel_mapping("R").buffer ~= 1, "A false key must disable the mapping")
+assert(panel_mapping("<CR>").buffer == 1, "Omitted keys must keep their defaults")
+assert(vim.deep_equal(panel_lines(), { "No changed files. Q: close" }), "Empty panel must omit disabled shortcuts")
+view:close()
+
+local no_next = false
+tools.setup({
+  buffer = false,
+  compare = {
+    keymap = {
+      panel = {
+        n = {
+          "next_file",
+          function(ctx)
+            assert(not ctx.row and not ctx.current)
+            no_next = true
+            return true
+          end,
+        },
+        q = false,
+      },
+    },
+  },
+})
+view = tools.compare({ cwd = fixture.root, from = "HEAD", to = "HEAD" })
+wait(function()
+  return view.panel ~= nil
+end)
+panel_mapping("n").callback()
+assert(no_next, "No available file must fall through to the next action")
+assert(panel_mapping("q").buffer ~= 1 and panel_mapping("R").buffer ~= 1)
+tools.setup({ buffer = false, compare = { keymap = { panel = {} }, panel_keys = { close = "Q" } } })
+assert(panel_mapping("n").buffer == 1, "An open view must keep its mappings after repeated setup")
+view:close()
+
+view = tools.compare({ cwd = fixture.root, from = "HEAD", to = "HEAD" })
+wait(function()
+  return view.panel ~= nil
+end)
+assert(#api.nvim_buf_get_keymap(view.panel, "n") == 0, "An empty panel keymap must replace legacy and default mappings")
+tools.dispose()
+view = tools.compare({ cwd = fixture.root, from = "HEAD", to = "HEAD" })
+wait(function()
+  return view.panel ~= nil
+end)
+assert(panel_mapping("R").buffer == 1 and panel_mapping("q").buffer == 1, "Disposing must reset panel shortcuts")
 view:close()
 fixture:cleanup()
 print(

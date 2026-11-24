@@ -114,11 +114,14 @@ function M.setup(opts)
   opts = vim.deepcopy(opts or {})
   opts = opts or {}
   local window, lazygit = require("git_tools.diff.window"), require("git_tools.lazygit")
+  local compare = require("git_tools.compare_config")
   local buffers = require("git_tools.buffer")
+  local panel_keymap = compare.resolve(opts.compare)
   local diff_options = window.resolve(opts.diff or {})
   local terminal_options = lazygit.resolve(opts.lazygit or {})
   local buffer_options = opts.buffer ~= false and buffers.resolve(opts.buffer) or nil
   local commands = require("git_tools.user_command")
+  compare.configure(panel_keymap)
   window.configure(diff_options)
   lazygit.configure(terminal_options)
   if buffer_options then
@@ -167,6 +170,10 @@ function M.dispose()
   local window = package.loaded["git_tools.diff.window"]
   if window then
     window.configure()
+  end
+  local compare = package.loaded["git_tools.compare_config"]
+  if compare then
+    compare.configure()
   end
   local commands = package.loaded["git_tools.user_command"]
   if commands then
