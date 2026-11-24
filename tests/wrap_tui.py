@@ -110,6 +110,12 @@ for layout in layouts:
             assert all("_END" in text for text in comparison["view"]["screen"])
             send("\x17h\x1bz")  # switch pane, then toggle both panes
             snapshot(lambda v: v.get("view", {}).get("wrap") == [False, False])
+            send("\t")  # advance from the left diff pane
+            advanced = snapshot(lambda v: v.get("view", {}).get("path") == "second.lua")["view"]
+            assert advanced["focus"] == 1, advanced
+            send("\x17h\t")  # move to the file panel, then wrap around to the first file
+            wrapped = snapshot(lambda v: v.get("view", {}).get("path") == "sample.lua")["view"]
+            assert wrapped["focus"] == 0, wrapped
             send("q")
             snapshot(lambda v: "view" not in v and v["origin"])
             print("Diff wrap TUI (" + layout + ")" + (" (configured)" if configured else "") + ": Insert/Normal Alt+Z, visible Unicode tails, selection, resize, focus and comparison panes passed")

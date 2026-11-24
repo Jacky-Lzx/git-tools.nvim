@@ -144,10 +144,13 @@ git_tools.compare(opts) / toggle_compare(opts)             *git-tools-compare*
     File panel and native double-column diff in an owned tab. Default lists
     staged (HEAD/index) and unstaged (index/buffer) changes. from/to select
     revisions; commit selects its first-parent patch, including root commits.
+    With only from (e.g. :GitTools compare HEAD~1), the working tree is on the
+    left and the revision is on the right.
     staged=true filters index changes; path restricts files.
         diffthis(revision)
     selects the current file. Return view:select(index), :refresh(), :close().
     Panel: Enter selects, R refreshes; panes: <leader>gp returns to panel;
+    Tab advances to the next file from either the panel or a diff pane.
     q closes. Working buffers and unsaved edits are retained on close.
     wrap=true enables wrapping; Alt+Z toggles all comparison/merge panes.
     setup({diff={wrap=true}}) sets the default; per-call wrap=false overrides

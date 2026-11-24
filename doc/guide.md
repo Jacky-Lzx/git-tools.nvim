@@ -225,6 +225,7 @@ status.scrollbar() -- register after nvim-scrollbar.setup(); gitsigns handler of
 ```lua
 local git = require("git_tools")
 git.compare() -- file panel with staged (HEAD/index) and unstaged (index/buffer)
+git.compare({ from = "HEAD~1" }) -- working tree on the left, revision on the right
 git.compare({ from = "main", to = "HEAD" }) -- resolved revisions, read-only sides
 git.compare({ commit = "HEAD" }) -- compare commit to first parent; root supported
 git.diffthis() -- current file, index/buffer; git.diffthis("HEAD~1") for revision
@@ -240,9 +241,10 @@ Changes to the theme or icon provider update open comparison panels.
 Pane headers identify the source and path; comparison panes share the remaining
 width equally, including after terminal resizing. Line numbers are absolute.
 
-In the panel, `<CR>` selects a file, `R` reloads the list; `<leader>gp` returns from a diff pane
-to the panel, and `q` closes the view. Revision/index panes are read-only; working
-panes use existing buffers and preserve unsaved changes on close. Native `]c`,
+In the panel, `<CR>` selects a file and `R` reloads the list. In the panel or a
+diff pane, `<Tab>` advances to the next file and wraps at the end.
+`<leader>gp` returns to the panel and `q` closes the view. Revision/index panes
+are read-only; working panes use existing buffers and preserve unsaved changes on close. Native `]c`,
 `[c`, diff folds and `do`/`dp` remain available subject to buffer writability.
 History pickers use `<C-d>` to open the selected commit in this view.
 

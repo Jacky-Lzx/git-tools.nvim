@@ -44,9 +44,11 @@ end)
 vim.keymap.set("n", "<F10>", function()
   fixture = dofile(root .. "/tests/helpers.lua").fixture()
   fixture:write("sample.lua", { old })
+  fixture:write("second.lua", { "return 1" })
   fixture:git("add", ".")
   fixture:git("commit", "-qm", "initial")
   fixture:write("sample.lua", { new })
+  fixture:write("second.lua", { "return 2" })
   view = require("git_tools").compare({ cwd = fixture.root })
 end)
 vim.keymap.set({ "n", "i" }, "<F12>", function()
@@ -70,7 +72,15 @@ vim.keymap.set({ "n", "i" }, "<F12>", function()
     }
   end
   if view and view.current and not view.closed then
-    result.view = { wrap = {}, screen = {}, widths = {}, titles = {} }
+    local focused = api.nvim_get_current_win()
+    result.view = {
+      path = view.current.path,
+      focus = focused == view.panel_win and 0 or vim.fn.index(view.windows, focused) + 1,
+      wrap = {},
+      screen = {},
+      widths = {},
+      titles = {},
+    }
     for _, win in ipairs(view.windows) do
       table.insert(result.view.wrap, vim.wo[win].wrap)
       table.insert(result.view.screen, screen(win))

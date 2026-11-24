@@ -136,6 +136,43 @@ function View:map(buf, lhs, callback, desc)
     return vim.fn.maparg(lhs, "n", false, true)
   end)
 end
+function View:unmap(buf, lhs)
+  local record = self.maps[buf][lhs]
+  if api.nvim_buf_is_valid(buf) then
+    api.nvim_buf_call(buf, function()
+      local current = vim.fn.maparg(lhs, "n", false, true)
+      if vim.deep_equal(current, record.installed) then
+        vim.keymap.del("n", lhs, { buffer = buf })
+        if next(record.previous) and record.previous.buffer == 1 then
+          vim.fn.mapset("n", false, record.previous)
+        end
+      end
+    end)
+  end
+  self.maps[buf][lhs] = nil
+end
+function View:next_file()
+  if self.panel_items == self.items and #self.items > 1 then
+    self:select(self.selection_index % #self.items + 1, true)
+  end
+end
+function View:map_pane_tab()
+  local win = api.nvim_get_current_win()
+  if self.tab_map_buf or not vim.tbl_contains(self.windows or {}, win) then
+    return
+  end
+  local buf = api.nvim_win_get_buf(win)
+  self:map(buf, "<Tab>", function()
+    self:next_file()
+  end, "Show next changed file")
+  self.tab_map_buf = buf
+end
+function View:unmap_pane_tab()
+  if self.tab_map_buf then
+    self:unmap(self.tab_map_buf, "<Tab>")
+    self.tab_map_buf = nil
+  end
+end
 function View:cleanup()
   if self.closed then
     return
@@ -148,19 +185,10 @@ function View:cleanup()
   if self.selection_task then
     self.selection_task:close()
   end
+  self:unmap_pane_tab()
   for buf, maps in pairs(self.maps) do
-    if api.nvim_buf_is_valid(buf) then
-      for lhs, record in pairs(maps) do
-        api.nvim_buf_call(buf, function()
-          local current = vim.fn.maparg(lhs, "n", false, true)
-          if vim.deep_equal(current, record.installed) then
-            vim.keymap.del("n", lhs, { buffer = buf })
-            if next(record.previous) and record.previous.buffer == 1 then
-              vim.fn.mapset("n", false, record.previous)
-            end
-          end
-        end)
-      end
+    for lhs in pairs(maps) do
+      self:unmap(buf, lhs)
     end
   end
   if self.group then
@@ -229,7 +257,7 @@ function View:layout(merge)
       spell = false,
       cursorline = true,
       winbar = " Files",
-      statusline = " Enter: open  R: refresh  q: close",
+      statusline = " Enter: open  Tab: next  R: refresh  q: close",
     }
     for name, value in pairs(panel_opts) do
       vim.wo[self.panel_win][name] = value
@@ -261,12 +289,28 @@ function View:layout(merge)
         end)
       end,
     })
+    -- Working-tree buffers can also be used outside the comparison tab.
+    api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
+      group = self.group,
+      callback = function()
+        self:map_pane_tab()
+      end,
+    })
+    api.nvim_create_autocmd({ "BufLeave", "WinLeave" }, {
+      group = self.group,
+      callback = function()
+        self:unmap_pane_tab()
+      end,
+    })
     self:map(self.panel, "q", function()
       self:close()
     end, "Close Git diff view")
     self:map(self.panel, "<CR>", function()
       self:select(api.nvim_win_get_cursor(self.panel_win)[1])
     end, "Show selected file diff")
+    self:map(self.panel, "<Tab>", function()
+      self:next_file()
+    end, "Show next changed file")
     self:map(self.panel, "R", function()
       self:refresh()
     end, "Refresh Git diff view")
@@ -319,7 +363,7 @@ function View:layout(merge)
   self:decorate_panel()
   vim.wo[self.panel_win].winbar = " Files (" .. #self.items .. ")"
 end
-function View:select(index)
+function View:select(index, keep_focus)
   if not self:alive() then
     return
   end
@@ -332,6 +376,7 @@ function View:select(index)
   end
   local task = git.task()
   self.selection_task = task
+  self.selection_index = index
   local merge, before, after = item.kind == "conflict", self.from, self.to
   if not self.opts.from and not self.opts.commit then
     if item.kind == "staged" then
@@ -343,6 +388,7 @@ function View:select(index)
   if merge then
     before, after = ":2", ":3"
   end
+  local working_tree_left = self.opts.from and not after
   M.blob(task, self.repo, before, item.old_path or item.path, function(err, old)
     if err then
       git.notify(err)
@@ -355,20 +401,21 @@ function View:select(index)
       if api.nvim_get_current_tabpage() ~= (self.tab or self.origin_tab) then
         return
       end
+      local focused = api.nvim_get_current_win()
       self:layout(merge)
-      local left = scratch(old, merge and "ours" or tostring(before), item.path)
-      local right
+      local original = scratch(old, merge and "ours" or tostring(before), item.path)
+      local result
       if not after or merge then
         if merge or vim.fn.filereadable(item.file) == 1 or vim.fn.bufnr(item.file) ~= -1 then
-          right = vim.fn.bufadd(item.file)
-          vim.fn.bufload(right)
+          result = vim.fn.bufadd(item.file)
+          vim.fn.bufload(result)
         else
-          right = scratch("", "deleted", item.path)
+          result = scratch("", "deleted", item.path)
         end
       else
-        right = scratch(new, tostring(after), item.path)
+        result = scratch(new, tostring(after), item.path)
       end
-      local buffers = merge and { left, right, scratch(new, "theirs", item.path) } or { left, right }
+      local buffers = merge and { original, result, scratch(new, "theirs", item.path) } or { original, result }
       local function label(revision)
         if revision == ":0" then
           return "Index"
@@ -380,6 +427,10 @@ function View:select(index)
           self.opts.from or (item.kind == "staged" and "HEAD" or label(before)),
           self.opts.to or (after and label(after) or "Working tree · editable"),
         }
+      if working_tree_left then
+        buffers[1], buffers[2] = buffers[2], buffers[1]
+        labels[1], labels[2] = labels[2], labels[1]
+      end
       for i, win in ipairs(self.windows) do
         require("git_tools.diff.theme").window(win)
         api.nvim_win_call(win, function()
@@ -411,37 +462,42 @@ function View:select(index)
           api.nvim_set_current_win(self.panel_win)
         end, "Focus Git file list")
       end
-      self.current, self.result = item, right
+      self.current, self.result = item, result
       api.nvim_buf_clear_namespace(self.panel, panel_ns, 0, -1)
       api.nvim_buf_set_extmark(self.panel, panel_ns, index - 1, 0, { line_hl_group = "GitToolsCompareSelected" })
       api.nvim_win_set_cursor(self.panel_win, { index, 0 })
       if merge then
         local conflict = require("git_tools.conflict")
         for key, kind in pairs({ co = "ours", ct = "theirs", cb = "both" }) do
-          self:map(right, key, function()
-            conflict.choose(kind, right)
+          self:map(result, key, function()
+            conflict.choose(kind, result)
           end, "Choose " .. kind .. " conflict changes")
         end
-        self:map(right, "]x", function()
+        self:map(result, "]x", function()
           conflict.nav("next")
         end, "Next conflict")
-        self:map(right, "[x", function()
+        self:map(result, "[x", function()
           conflict.nav("prev")
         end, "Previous conflict")
-        self:map(right, "S", function()
+        self:map(result, "S", function()
           self:resolve()
         end, "Save and stage resolved file")
-        self:map(right, "<leader>gb", function()
+        self:map(result, "<leader>gb", function()
           M.blob(self.task, self.repo, ":1", item.path, function(base_err, text)
             if base_err then
               git.notify(base_err)
             else
-              require("git_tools.ui").scratch(git.lines(text), "base/" .. item.path, vim.bo[right].filetype)
+              require("git_tools.ui").scratch(git.lines(text), "base/" .. item.path, vim.bo[result].filetype)
             end
           end)
         end, "Show conflict base version")
       end
-      api.nvim_set_current_win(self.windows[2])
+      if keep_focus and api.nvim_win_is_valid(focused) then
+        api.nvim_set_current_win(focused)
+      else
+        api.nvim_set_current_win(self.windows[working_tree_left and 1 or 2])
+      end
+      self:map_pane_tab()
       if self.opts.on_ready then
         self.opts.on_ready(self)
       end
@@ -589,6 +645,7 @@ function View:refresh()
     loaded(err, not err and M.parse_names(output, self.repo.root) or nil)
   end)
 end
+
 function M.open(opts)
   opts = require("git_tools.diff.window").options(opts)
   local view = setmetatable({
