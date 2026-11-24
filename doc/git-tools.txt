@@ -149,8 +149,9 @@ git_tools.compare(opts) / toggle_compare(opts)             *git-tools-compare*
     staged=true filters index changes; path restricts files.
         diffthis(revision)
     selects the current file. Return view:select(index), :refresh(), :close().
-    Panel: Enter selects, R refreshes; panes: <leader>gp returns to panel;
-    Tab advances to the next file from either the panel or a diff pane.
+    The panel groups changes by directory. Enter opens a file or folds a
+    directory; R refreshes. Tab advances through visible files in either the
+    panel or a diff pane. <leader>gp returns to the panel.
     q closes. Working buffers and unsaved edits are retained on close.
     wrap=true enables wrapping; Alt+Z toggles all comparison/merge panes.
     setup({diff={wrap=true}}) sets the default; per-call wrap=false overrides

@@ -115,8 +115,15 @@ for layout in layouts:
             advanced = snapshot(lambda v: v.get("view", {}).get("path") == "second.lua")["view"]
             assert advanced["focus"] == 1, advanced
             send("\x17h\t")  # move to the file panel, then wrap around to the first file
-            wrapped = snapshot(lambda v: v.get("view", {}).get("path") == "sample.lua")["view"]
+            wrapped = snapshot(lambda v: v.get("view", {}).get("path") == "src/nested/sample.lua")["view"]
             assert wrapped["focus"] == 0, wrapped
+            send("gg\r")  # collapse src while its file is displayed
+            collapsed = snapshot(lambda v: v.get("view", {}).get("files") == ["▸ src", " W  second.lua"])["view"]
+            assert collapsed["path"] == "src/nested/sample.lua" and collapsed["focus"] == 0, collapsed
+            send("\t")  # skip the collapsed directory's files
+            snapshot(lambda v: v.get("view", {}).get("path") == "second.lua")
+            send("gg\r2j\r")  # expand src and open the nested file
+            snapshot(lambda v: v.get("view", {}).get("path") == "src/nested/sample.lua" and v["view"]["focus"] == 2)
             send("q")
             snapshot(lambda v: "view" not in v and v["origin"])
             print("Diff wrap TUI (" + layout + ")" + (" (configured)" if configured else "") + ": Insert/Normal Alt+Z, visible Unicode tails, selection, resize, focus and comparison panes passed")

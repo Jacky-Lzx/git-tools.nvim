@@ -52,6 +52,7 @@ local function apply(c)
   for name, value in pairs({
     Normal = { fg = c.ui.fg, bg = sidebar },
     Title = { fg = c.ui.accent, bg = sidebar, bold = true },
+    Directory = { fg = c.ui.accent },
     Selected = { bg = c.ui.cursorline_bg },
     Add = { fg = c.git.add },
     Change = { fg = c.git.change },

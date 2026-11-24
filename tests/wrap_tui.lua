@@ -43,11 +43,12 @@ vim.keymap.set({ "n", "i" }, "<F9>", function()
 end)
 vim.keymap.set("n", "<F10>", function()
   fixture = dofile(root .. "/tests/helpers.lua").fixture()
-  fixture:write("sample.lua", { old })
+  vim.fn.mkdir(fixture.root .. "/src/nested", "p")
+  fixture:write("src/nested/sample.lua", { old })
   fixture:write("second.lua", { "return 1" })
   fixture:git("add", ".")
   fixture:git("commit", "-qm", "initial")
-  fixture:write("sample.lua", { new })
+  fixture:write("src/nested/sample.lua", { new })
   fixture:write("second.lua", { "return 2" })
   view = require("git_tools").compare({ cwd = fixture.root })
 end)
@@ -80,6 +81,7 @@ vim.keymap.set({ "n", "i" }, "<F12>", function()
       screen = {},
       widths = {},
       titles = {},
+      files = api.nvim_buf_get_lines(view.panel, 0, -1, false),
       columns = { api.nvim_win_get_position(view.panel_win)[2] },
     }
     for _, win in ipairs(view.windows) do

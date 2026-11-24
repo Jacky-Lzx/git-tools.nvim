@@ -1,5 +1,6 @@
 local api = vim.api
 local git, repository = require("git_tools.git"), require("git_tools.repository")
+local tree = require("git_tools.view_tree")
 local M = { active = {} }
 local View = {}
 View.__index = View
@@ -166,8 +167,17 @@ function View:unmap(buf, lhs)
   self.maps[buf][lhs] = nil
 end
 function View:next_file()
-  if self.panel_items == self.items and #self.items > 1 then
-    self:select(self.selection_index % #self.items + 1, true)
+  if self.panel_items ~= self.items then
+    return
+  end
+  local rows = self.panel_rows
+  local current = self.panel_file_rows[self.selection_index] or api.nvim_win_get_cursor(self.panel_win)[1]
+  for offset = 1, #rows do
+    local node = rows[(current + offset - 1) % #rows + 1]
+    if node.index and node.index ~= self.selection_index then
+      self:select(node.index, true)
+      return
+    end
   end
 end
 function View:map_pane_tab()
@@ -232,16 +242,16 @@ function View:decorate_panel()
   local icons = package.loaded["theme_tools.icons"]
   local get_icon = type(icons) == "table" and icons.get
   api.nvim_buf_clear_namespace(self.panel, panel_rows_ns, 0, -1)
-  for index, item in ipairs(self.panel_items or {}) do
-    local row, badge = index - 1, panel_badge(item)
-    api.nvim_buf_set_extmark(self.panel, panel_rows_ns, row, 1, {
-      end_col = 1 + #badge,
-      hl_group = panel_badge_colors[badge:sub(1, 1)] or "GitToolsCompareChange",
+  for index, node in ipairs(self.panel_rows or {}) do
+    local row = index - 1
+    api.nvim_buf_set_extmark(self.panel, panel_rows_ns, row, node.highlight_start, {
+      end_col = node.highlight_end,
+      hl_group = node.highlight,
     })
     if type(get_icon) == "function" then
-      local icon, hl = get_icon("file", item.path)
+      local icon, hl = get_icon(node.children and "directory" or "file", node.path)
       if icon and icon ~= "" then
-        api.nvim_buf_set_extmark(self.panel, panel_rows_ns, row, 3 + #badge, {
+        api.nvim_buf_set_extmark(self.panel, panel_rows_ns, row, node.icon_col, {
           virt_text = { { icon .. " ", hl } },
           virt_text_pos = "inline",
           hl_mode = "combine",
@@ -250,6 +260,66 @@ function View:decorate_panel()
     end
   end
 end
+
+function View:highlight_panel_selection()
+  api.nvim_buf_clear_namespace(self.panel, panel_ns, 0, -1)
+  local row = self.panel_file_rows[self.current_index]
+  if row and self.panel_items[self.current_index] == self.current then
+    api.nvim_buf_set_extmark(self.panel, panel_ns, row - 1, 0, { line_hl_group = "GitToolsCompareSelected" })
+    return row
+  end
+end
+
+function View:render_panel()
+  self.panel_rows, self.panel_file_rows = tree.rows(self.tree, self.collapsed)
+  local lines = {}
+  for row, node in ipairs(self.panel_rows) do
+    local indent = string.rep("  ", node.depth)
+    local name = vim.fn.strtrans(node.name)
+    if node.children then
+      local marker = self.collapsed[node.path] and "▸ " or "▾ "
+      lines[row] = indent .. marker .. name
+      node.icon_col = #indent + #marker
+      node.highlight_start, node.highlight_end = #indent, #lines[row]
+      node.highlight = "GitToolsCompareDirectory"
+    else
+      local badge = panel_badge(self.items[node.index])
+      lines[row] = indent .. " " .. badge .. "  " .. name
+      node.highlight_start, node.highlight_end = #indent + 1, #indent + 1 + #badge
+      node.highlight = panel_badge_colors[badge:sub(1, 1)] or "GitToolsCompareChange"
+      node.icon_col = node.highlight_end + 2
+    end
+  end
+  if #lines == 0 then
+    lines = { "No changed files. R: refresh; q: close" }
+  end
+  vim.bo[self.panel].modifiable = true
+  api.nvim_buf_set_lines(self.panel, 0, -1, false, lines)
+  vim.bo[self.panel].modifiable = false
+  self.panel_items = self.items
+  self:highlight_panel_selection()
+  self:decorate_panel()
+  vim.wo[self.panel_win].winbar = " Files (" .. #self.items .. ")"
+end
+
+function View:open_panel_row()
+  if self.panel_items ~= self.items then
+    return
+  end
+  local row = api.nvim_win_get_cursor(self.panel_win)[1]
+  local node = self.panel_rows[row]
+  if not node then
+    return
+  end
+  if node.children then
+    self.collapsed[node.path] = not self.collapsed[node.path] or nil
+    self:render_panel()
+    api.nvim_win_set_cursor(self.panel_win, { row, 0 })
+  else
+    self:select(node.index)
+  end
+end
+
 function View:layout(merge)
   if not self.tab then
     vim.cmd("tabnew")
@@ -320,8 +390,8 @@ function View:layout(merge)
       self:close()
     end, "Close Git diff view")
     self:map(self.panel, "<CR>", function()
-      self:select(api.nvim_win_get_cursor(self.panel_win)[1])
-    end, "Show selected file diff")
+      self:open_panel_row()
+    end, "Open file diff or toggle folder")
     self:map(self.panel, "<Tab>", function()
       self:next_file()
     end, "Show next changed file")
@@ -348,23 +418,9 @@ function View:layout(merge)
     end
     self:resize()
   end
-  if self.panel_items == self.items then
-    return
+  if self.panel_items ~= self.items then
+    self:render_panel()
   end
-  local lines = {}
-  for _, item in ipairs(self.items) do
-    lines[#lines + 1] = " " .. panel_badge(item) .. "  " .. item.path
-  end
-  if #lines == 0 then
-    lines = { "No changed files. R: refresh; q: close" }
-  end
-  vim.bo[self.panel].modifiable = true
-  api.nvim_buf_set_lines(self.panel, 0, -1, false, lines)
-  vim.bo[self.panel].modifiable = false
-  api.nvim_buf_clear_namespace(self.panel, panel_ns, 0, -1)
-  self.panel_items = self.items
-  self:decorate_panel()
-  vim.wo[self.panel_win].winbar = " Files (" .. #self.items .. ")"
 end
 
 function View:select(index, keep_focus)
@@ -469,10 +525,11 @@ function View:select(index, keep_focus)
           api.nvim_set_current_win(self.panel_win)
         end, "Focus Git file list")
       end
-      self.current, self.result = item, result
-      api.nvim_buf_clear_namespace(self.panel, panel_ns, 0, -1)
-      api.nvim_buf_set_extmark(self.panel, panel_ns, index - 1, 0, { line_hl_group = "GitToolsCompareSelected" })
-      api.nvim_win_set_cursor(self.panel_win, { index, 0 })
+      self.current, self.result, self.current_index = item, result, index
+      local row = self:highlight_panel_selection()
+      if row then
+        api.nvim_win_set_cursor(self.panel_win, { row, 0 })
+      end
       if merge then
         local conflict = require("git_tools.conflict")
         for key, kind in pairs({ co = "ours", ct = "theirs", cb = "both" }) do
@@ -611,11 +668,16 @@ function View:refresh()
         return item.path == self.opts.path
       end, items)
     end
-    if #self.items > 0 then
-      self:select(1)
-    else
-      self:layout(false)
+    self.selection_index = nil
+    self.tree = tree.build(self.items)
+    local rows = tree.rows(self.tree, self.collapsed)
+    for _, node in ipairs(rows) do
+      if node.index then
+        self:select(node.index)
+        return
+      end
     end
+    self:layout(#self.items > 0 and self.merge or false)
   end
   if not self.opts.from and not self.opts.commit then
     repository.status(task, self.repo, function(err, items)
@@ -663,6 +725,7 @@ function M.open(opts)
     task = git.task(),
     maps = {},
     items = {},
+    collapsed = {},
     origin_tab = api.nvim_get_current_tabpage(),
   }, View)
   M.active[view] = true

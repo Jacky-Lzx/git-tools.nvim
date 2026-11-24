@@ -236,16 +236,18 @@ git.toggle_compare()
 git.merge() -- conflicted files only, ours / editable result / theirs
 ```
 
-Each view owns a tab with a file panel and native Neovim diff windows. Panel
-rows mark staged (`S`), working (`W`), untracked (`?`) and conflicted (`!`) files;
-revision comparisons show Git's change status. The selected file stays highlighted.
-The file panel uses the theme-tools palette and file icons when available.
+Each view owns a tab with a file panel and native Neovim diff windows. The
+panel groups changed files by directory and marks staged (`S`), working (`W`),
+untracked (`?`) and conflicted (`!`) entries. Revision comparisons show Git's
+change status. The selected file stays highlighted when visible.
+The panel uses the theme-tools palette and file and folder icons when available.
 Changes to the theme or icon provider update open comparison panels.
 Pane headers identify the source and path; comparison panes share the remaining
 width equally, including after terminal resizing. Line numbers are absolute.
 
-In the panel, `<CR>` selects a file and `R` reloads the list. In the panel or a
-diff pane, `<Tab>` advances to the next file and wraps at the end.
+In the panel, `<CR>` opens a file diff or toggles a directory. Directories start
+expanded and retain their fold state when `R` refreshes the tree. In the panel
+or a diff pane, `<Tab>` advances through visible files and wraps at the end.
 `<leader>gp` returns to the panel and `q` closes the view. Revision/index panes
 are read-only; working panes use existing buffers and preserve unsaved changes on close. Native `]c`,
 `[c`, diff folds and `do`/`dp` remain available subject to buffer writability.
