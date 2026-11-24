@@ -296,9 +296,23 @@ end
 for _, lhs in ipairs({ "q", "<CR>", "<Tab>", "R" }) do
   assert(panel_mapping(lhs).buffer ~= 1, "Custom panel keys must replace defaults")
 end
-local hints =
-  api.nvim_eval_statusline(vim.wo[view.panel_win].statusline, { winid = view.panel_win, maxwidth = 120 }).str
-assert(hints == " o: open or fold  <C-n>: next  %: refresh  Q: close  y: custom action")
+local function panel_footer()
+  local win = view.panel_win
+  return api.nvim_eval_statusline(vim.wo[win].statusline, {
+    winid = win,
+    maxwidth = api.nvim_win_get_width(win),
+  }).str
+end
+local panel_width = api.nvim_win_get_width(view.panel_win)
+local narrow = panel_footer()
+assert(vim.startswith(narrow, " o: open or fold") and not narrow:find("3 files", 1, true))
+api.nvim_win_set_width(view.panel_win, 100)
+api.nvim_exec_autocmds("WinResized", {})
+local wide = panel_footer()
+assert(vim.startswith(wide, " o: open or fold  <C-n>: next  %: refresh  Q: close  y: custom action"))
+assert(vim.endswith(wide, "3 files"))
+api.nvim_win_set_width(view.panel_win, panel_width)
+api.nvim_exec_autocmds("WinResized", {})
 assert(panel_mapping("o").desc == "open or fold")
 local open_row = panel_mapping("o").callback
 api.nvim_win_set_cursor(view.panel_win, { 1, 0 })
@@ -327,6 +341,16 @@ panel_mapping("<C-n>").callback()
 wait(function()
   return view.current.path == "root.txt"
 end)
+fixture:write("extra.txt", { "extra" })
+panel_mapping("%").callback()
+wait(function()
+  return #view.items == 4 and view.panel_items == view.items
+end)
+api.nvim_win_set_width(view.panel_win, 100)
+api.nvim_exec_autocmds("WinResized", {})
+assert(vim.endswith(panel_footer(), "4 files"), "Refreshing the file list must update the footer")
+vim.fn.delete(fixture.root .. "/extra.txt")
+api.nvim_set_current_win(view.panel_win)
 panel_mapping("Q").callback()
 assert(view.closed, "Configured close key must close the view")
 

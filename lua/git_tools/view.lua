@@ -1,5 +1,6 @@
 local api = vim.api
 local scratch_buffer = require("base_tools.buffer").scratch
+local footer = require("base_tools.footer")
 local keymaps = require("base_tools.keymap")
 local git, repository = require("git_tools.git"), require("git_tools.repository")
 local compare = require("git_tools.compare_config")
@@ -204,6 +205,9 @@ function View:cleanup()
       self:unmap(buf, lhs)
     end
   end
+  if self.panel_footer then
+    self.panel_footer:close()
+  end
   if self.group then
     api.nvim_del_augroup_by_id(self.group)
   end
@@ -295,7 +299,9 @@ function View:render_panel()
   self.panel_items = self.items
   self:highlight_panel_selection()
   self:decorate_panel()
-  vim.wo[self.panel_win].winbar = " Files (" .. #self.items .. ")"
+  local count = #self.items
+  self.panel_footer:update({ right = count .. (count == 1 and " file" or " files") })
+  vim.wo[self.panel_win].winbar = " Files (" .. count .. ")"
 end
 
 function View:panel_row()
@@ -462,9 +468,13 @@ function View:layout(merge)
       self:map(self.panel, binding.lhs, function()
         self:run_panel_binding(binding)
       end, binding.desc)
+
       hints[#hints + 1] = panel_key_hint(binding.lhs, binding.hint)
     end
-    vim.wo[self.panel_win].statusline = #hints > 0 and " " .. bar(table.concat(hints, "  ")) or ""
+
+    self.panel_footer = footer.attach(self.panel_win, {
+      left = #hints > 0 and " " .. table.concat(hints, "  ") or "",
+    })
   end
 
   if self.merge ~= merge or not self.windows then
