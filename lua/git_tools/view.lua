@@ -4,6 +4,22 @@ local M = { active = {} }
 local View = {}
 View.__index = View
 local panel_ns = api.nvim_create_namespace("git_tools.view.panel")
+local panel_rows_ns = api.nvim_create_namespace("git_tools.view.panel.rows")
+
+local panel_badges = { staged = "S", unstaged = "W", untracked = "?", conflict = "!" }
+local panel_badge_colors = {
+  S = "GitToolsCompareAdd",
+  W = "GitToolsCompareChange",
+  ["?"] = "GitToolsCompareAdd",
+  ["!"] = "GitToolsCompareConflict",
+  A = "GitToolsCompareAdd",
+  D = "GitToolsCompareDelete",
+  U = "GitToolsCompareConflict",
+}
+
+local function panel_badge(item)
+  return panel_badges[item.kind] or item.status or "M"
+end
 
 local function bar(text)
   return text:gsub("%%", "%%%%"):gsub("[\r\n]", " ")
@@ -167,6 +183,31 @@ function View:close()
   end
   self:cleanup()
 end
+function View:decorate_panel()
+  if not self:alive() or not api.nvim_buf_is_loaded(self.panel) then
+    return
+  end
+  local icons = package.loaded["theme_tools.icons"]
+  local get_icon = type(icons) == "table" and icons.get
+  api.nvim_buf_clear_namespace(self.panel, panel_rows_ns, 0, -1)
+  for index, item in ipairs(self.panel_items or {}) do
+    local row, badge = index - 1, panel_badge(item)
+    api.nvim_buf_set_extmark(self.panel, panel_rows_ns, row, 1, {
+      end_col = 1 + #badge,
+      hl_group = panel_badge_colors[badge:sub(1, 1)] or "GitToolsCompareChange",
+    })
+    if type(get_icon) == "function" then
+      local icon, hl = get_icon("file", item.path)
+      if icon and icon ~= "" then
+        api.nvim_buf_set_extmark(self.panel, panel_rows_ns, row, 3 + #badge, {
+          virt_text = { { icon .. " ", hl } },
+          virt_text_pos = "inline",
+          hl_mode = "combine",
+        })
+      end
+    end
+  end
+end
 function View:layout(merge)
   if not self.tab then
     vim.cmd("tabnew")
@@ -193,7 +234,15 @@ function View:layout(merge)
     for name, value in pairs(panel_opts) do
       vim.wo[self.panel_win][name] = value
     end
+    require("git_tools.diff.theme").compare_panel(self.panel_win)
     self.group = api.nvim_create_augroup("GitToolsView" .. self.panel, { clear = true })
+    api.nvim_create_autocmd("User", {
+      group = self.group,
+      pattern = { "ThemeToolsReady", "ThemeToolsIconsChanged" },
+      callback = function()
+        self:decorate_panel()
+      end,
+    })
     api.nvim_create_autocmd("VimResized", {
       group = self.group,
       callback = function()
@@ -252,10 +301,12 @@ function View:layout(merge)
     end
     self:resize()
   end
+  if self.panel_items == self.items then
+    return
+  end
   local lines = {}
   for _, item in ipairs(self.items) do
-    local kind = ({ staged = "S", unstaged = "W", untracked = "?", conflict = "!" })[item.kind]
-    lines[#lines + 1] = " " .. (kind or item.status or "M") .. "  " .. item.path
+    lines[#lines + 1] = " " .. panel_badge(item) .. "  " .. item.path
   end
   if #lines == 0 then
     lines = { "No changed files. R: refresh; q: close" }
@@ -263,6 +314,9 @@ function View:layout(merge)
   vim.bo[self.panel].modifiable = true
   api.nvim_buf_set_lines(self.panel, 0, -1, false, lines)
   vim.bo[self.panel].modifiable = false
+  api.nvim_buf_clear_namespace(self.panel, panel_ns, 0, -1)
+  self.panel_items = self.items
+  self:decorate_panel()
   vim.wo[self.panel_win].winbar = " Files (" .. #self.items .. ")"
 end
 function View:select(index)
@@ -359,7 +413,7 @@ function View:select(index)
       end
       self.current, self.result = item, right
       api.nvim_buf_clear_namespace(self.panel, panel_ns, 0, -1)
-      api.nvim_buf_set_extmark(self.panel, panel_ns, index - 1, 0, { line_hl_group = "CursorLine" })
+      api.nvim_buf_set_extmark(self.panel, panel_ns, index - 1, 0, { line_hl_group = "GitToolsCompareSelected" })
       api.nvim_win_set_cursor(self.panel_win, { index, 0 })
       if merge then
         local conflict = require("git_tools.conflict")

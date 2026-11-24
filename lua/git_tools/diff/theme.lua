@@ -48,22 +48,39 @@ local function apply(c)
   for name, value in pairs(groups) do
     api.nvim_set_hl(0, "GitToolsDiff" .. name, value)
   end
+  local sidebar = c.ui.sidebar_bg
+  for name, value in pairs({
+    Normal = { fg = c.ui.fg, bg = sidebar },
+    Title = { fg = c.ui.accent, bg = sidebar, bold = true },
+    Selected = { bg = c.ui.cursorline_bg },
+    Add = { fg = c.git.add },
+    Change = { fg = c.git.change },
+    Delete = { fg = c.git.delete },
+    Conflict = { fg = c.diagnostic.error },
+  }) do
+    api.nvim_set_hl(0, "GitToolsCompare" .. name, value)
+  end
 end
 
 local function fallback()
-  local bg = color("Normal", "bg") or (vim.o.background == "light" and "#ffffff" or "#14161b")
+  local normal_bg = color("Normal", "bg")
+  local light = vim.o.background == "light"
   apply({
-    palette = { bg = bg },
+    palette = { bg = normal_bg or (light and "#ffffff" or "#14161b") },
     ui = {
-      fg = color("Normal", "fg") or "#e0e2ea",
+      fg = color("Normal", "fg") or (light and "#14161b" or "#e0e2ea"),
+      sidebar_bg = normal_bg or "NONE",
+      cursorline_bg = color("CursorLine", "bg") or "NONE",
       muted = color("Comment", "fg") or "#808080",
       border = color("FloatBorder", "fg") or "#808080",
       accent = color("Function", "fg") or "#61afef",
     },
     git = {
       add = color("Added", "fg") or color("diffAdded", "fg") or "#98c379",
+      change = color("Changed", "fg") or color("diffChanged", "fg") or "#d7ba7d",
       delete = color("Removed", "fg") or color("diffRemoved", "fg") or "#e05f65",
     },
+    diagnostic = { error = color("DiagnosticError", "fg") or "#e05f65" },
   })
 end
 
@@ -93,21 +110,8 @@ function M.setup()
   attach()
 end
 
--- Scope native diff colors to our panes rather than changing the user's theme.
-function M.window(win)
+local function window_highlights(win, mappings)
   M.setup()
-  local mappings = {
-    DiffAdd = "GitToolsDiffAdd",
-    DiffDelete = "GitToolsDiffDelete",
-    DiffChange = "GitToolsDiffChange",
-    DiffText = "GitToolsDiffText",
-    DiffTextAdd = "GitToolsDiffAddText",
-    DiffTextDelete = "GitToolsDiffDeleteText",
-    DiffAdded = "GitToolsDiffAdd",
-    DiffRemoved = "GitToolsDiffDelete",
-    DiffChanged = "GitToolsDiffChange",
-    DiffFiller = "GitToolsDiffFiller",
-  }
   local entries = {}
   for entry in vim.wo[win].winhighlight:gmatch("[^,]+") do
     if not mappings[entry:match("^([^:]+):")] then
@@ -118,6 +122,31 @@ function M.window(win)
     entries[#entries + 1] = source .. ":" .. target
   end
   vim.wo[win].winhighlight = table.concat(entries, ",")
+end
+
+function M.window(win)
+  window_highlights(win, {
+    DiffAdd = "GitToolsDiffAdd",
+    DiffDelete = "GitToolsDiffDelete",
+    DiffChange = "GitToolsDiffChange",
+    DiffText = "GitToolsDiffText",
+    DiffTextAdd = "GitToolsDiffAddText",
+    DiffTextDelete = "GitToolsDiffDeleteText",
+    DiffAdded = "GitToolsDiffAdd",
+    DiffRemoved = "GitToolsDiffDelete",
+    DiffChanged = "GitToolsDiffChange",
+    DiffFiller = "GitToolsDiffFiller",
+  })
+end
+
+function M.compare_panel(win)
+  window_highlights(win, {
+    Normal = "GitToolsCompareNormal",
+    NormalNC = "GitToolsCompareNormal",
+    CursorLine = "GitToolsCompareSelected",
+    WinBar = "GitToolsCompareTitle",
+    WinBarNC = "GitToolsCompareTitle",
+  })
 end
 
 return M

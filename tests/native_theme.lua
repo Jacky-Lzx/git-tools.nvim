@@ -27,11 +27,45 @@ if vim.fn.isdirectory(theme_root) == 0 then
   vim.cmd("qa!")
   return
 end
+local fixture = dofile(root .. "/tests/helpers.lua").fixture()
+fixture:write("main.lua", { "local x = 1" })
+fixture:git("add", "main.lua")
+fixture:git("commit", "-qm", "initial")
+fixture:write("main.lua", { "local x = 2" })
+local view = require("git_tools").compare({ cwd = fixture.root })
+assert(
+  vim.wait(5000, function()
+    return view.current ~= nil
+  end, 5),
+  "Comparison did not open"
+)
+local rows_ns = api.nvim_get_namespaces()["git_tools.view.panel.rows"]
+local function panel_marks()
+  return api.nvim_buf_get_extmarks(view.panel, rows_ns, 0, -1, { details = true })
+end
+assert(#panel_marks() == 1 and panel_marks()[1][4].hl_group == "GitToolsCompareChange")
+assert(vim.wo[view.panel_win].winhighlight:find("Normal:GitToolsCompareNormal", 1, true))
+local panel_tick = api.nvim_buf_get_changedtick(view.panel)
+local panel_cursor = api.nvim_win_get_cursor(view.panel_win)
+local focused_win = api.nvim_get_current_win()
+
 vim.opt.rtp:prepend(theme_root)
 local themes = require("theme_tools")
 require("theme_tools.palette").setup({ overrides = { git = { add = "#123456" } } })
+themes.icons.setup({ providers = { "ascii", "none" }, default = "ascii", persist = false })
 api.nvim_exec_autocmds("User", { pattern = "ThemeToolsReady" })
 assert(api.nvim_get_hl(0, { name = "GitToolsDiffAddNumber" }).fg == 0x123456)
+local icon, icon_hl = themes.icons.get("file", "main.lua")
+local function assert_file_icon()
+  local marks = panel_marks()
+  assert(#marks == 2 and marks[2][3] == 4, "File icon must be placed before the path")
+  assert(vim.deep_equal(marks[2][4].virt_text, { { icon .. " ", icon_hl } }), "Use the theme icon and its highlight")
+end
+assert_file_icon()
+assert(themes.icons.set("none"))
+assert(#panel_marks() == 1, "Hiding icons should retain the status highlight")
+assert(themes.icons.set("ascii"))
+assert_file_icon()
 require("theme_tools.palette").setup({})
 vim.cmd.colorscheme("theme-tools-mocha")
 themes.refresh_palette()
@@ -46,11 +80,19 @@ local dracula = themes.palette()
 assert(api.nvim_get_hl(0, { name = "GitToolsDiffDeleteNumber" }).fg == tonumber(dracula.git.delete:sub(2), 16))
 assert(api.nvim_get_hl(0, { name = "GitToolsDiffAdd" }).bg ~= old_background)
 assert(api.nvim_buf_get_changedtick(buf) == tick, "Theme changes must recolor without rebuilding the preview")
+assert(api.nvim_get_hl(0, { name = "GitToolsCompareNormal" }).bg == tonumber(dracula.ui.sidebar_bg:sub(2), 16))
+assert(api.nvim_get_hl(0, { name = "GitToolsCompareChange" }).fg == tonumber(dracula.git.change:sub(2), 16))
 require("theme_tools.palette").setup({ overrides = { git = { add = "#abcdef" }, ui = { border = "#fedcba" } } })
 themes.refresh_palette()
 assert(api.nvim_get_hl(0, { name = "GitToolsDiffAddNumber" }).fg == 0xabcdef)
 assert(api.nvim_get_hl(0, { name = "GitToolsDiffBorder" }).fg == 0xfedcba)
+assert(api.nvim_buf_get_changedtick(view.panel) == panel_tick, "Theme and icon changes must preserve panel text")
+assert(vim.deep_equal(api.nvim_win_get_cursor(view.panel_win), panel_cursor))
+assert(api.nvim_get_current_win() == focused_win and view.current.path == "main.lua")
+view:close()
+assert(themes.icons.set("none"))
+fixture:cleanup()
 print(
-  "Native diff themes: standalone fallback, late theme-tools attachment, real Mocha/Dracula switching and semantic overrides passed"
+  "Diff and compare themes: fallback, late theme-tools attachment, live palettes, file icons and preserved selection passed"
 )
 vim.cmd("qa!")

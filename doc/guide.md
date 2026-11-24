@@ -235,6 +235,8 @@ git.merge() -- conflicted files only, ours / editable result / theirs
 Each view owns a tab with a file panel and native Neovim diff windows. Panel
 rows mark staged (`S`), working (`W`), untracked (`?`) and conflicted (`!`) files;
 revision comparisons show Git's change status. The selected file stays highlighted.
+The file panel uses the theme-tools palette and file icons when available.
+Changes to the theme or icon provider update open comparison panels.
 Pane headers identify the source and path; comparison panes share the remaining
 width equally, including after terminal resizing. Line numbers are absolute.
 
