@@ -12,7 +12,8 @@ local function complete(line)
 end
 local wildoptions = vim.o.wildoptions
 vim.o.wildoptions = ""
-assert(#complete("GitTools ") == 18)
+assert(#complete("GitTools ") == 19)
+assert(vim.deep_equal(complete("GitTools men"), { "menu" }))
 assert(vim.deep_equal(complete("GitTools co"), { "compare" }))
 assert(vim.deep_equal(complete("set number | GitTools co"), { "compare" }))
 assert(vim.deep_equal(complete("GitTools compare"), { "compare" }))
@@ -39,6 +40,7 @@ assert(not pcall(plugin.setup, { compare = { panel_keys = { refresh = "" } } }),
 assert(not pcall(plugin.setup, { compare = { panel_keys = { close = "R" } } }), "setup must reject duplicate keys")
 assert(not pcall(plugin.setup, { compare = { keymap = { panel = { o = "unknown" } } } }))
 assert(not pcall(plugin.setup, { compare = { keymap = { panel = { o = { [2] = "open" } } } } }))
+assert(not pcall(plugin.setup, { command = { default = "missing" } }))
 assert(vim.deep_equal(commands, vim.api.nvim_get_commands({})), "Invalid setup replaced commands")
 assert(vim.deep_equal(handlers, vim.api.nvim_get_autocmds({})), "Invalid setup replaced handlers")
 plugin.setup(caller)
@@ -60,5 +62,28 @@ plugin.dispose()
 assert(not vim.api.nvim_get_commands({}).GitTools, "dispose did not remove :GitTools")
 plugin.setup(caller)
 assert(vim.api.nvim_get_commands({}).GitTools, "setup did not restore :GitTools after disposal")
+
+local select, compare = vim.ui.select, plugin.compare
+local items, choose, previous_args
+vim.ui.select = function(choices, options, callback)
+  assert(options.prompt == "GitTools")
+  assert(options.format_item(choices[3]) == "Compare working tree")
+  assert(options.format_item(choices[4]) == "Compare last commit")
+  items, choose = choices, callback
+end
+plugin.compare = function(args)
+  previous_args = args or "working tree"
+end
+vim.cmd("GitTools menu")
+assert(#items == 8 and items[3].id == "compare" and items[4].id == "last_commit")
+choose(items[3])
+assert(previous_args == "working tree")
+plugin.setup({ buffer = false, command = { default = "menu" } })
+items = nil
+vim.cmd.GitTools()
+assert(items, "A configured default menu must open on a bare command")
+choose(items[4])
+assert(vim.deep_equal(previous_args, { commit = "HEAD" }))
+vim.ui.select, plugin.compare = select, compare
 plugin.dispose()
 print("git-tools.nvim: setup input isolation, invalid configuration and registration lifetime passed")

@@ -237,6 +237,11 @@ git_tools.merge(opts)                                        *git-tools-merge*
     background so later completion requests can use their results.
     Ex ranges select lines for blame/history/browse/hunk operations.
 
+    `:GitTools menu` opens the Git action menu through |vim.ui.select()|.
+    It offers changed files, hunks, working-tree and last-commit comparisons,
+    history, branches, stash, and LazyGit. To open it with `:GitTools` alone,
+    set `command = { default = "menu" }` in setup(). The default is "status".
+
 git_tools.branches(opts)                                  *git-tools-branches*
     Local branch picker; all=true includes remote refs. Recent commit preview.
     Enter switches (remote refs create a local tracking branch); C-a creates a

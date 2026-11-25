@@ -1,5 +1,6 @@
-local registry = require("base_tools.user_command").new()
+local user_command = require("base_tools.user_command")
 local M = {}
+local registry
 local default_compare_revision = "HEAD~1"
 
 local function command_options(command)
@@ -10,7 +11,11 @@ local function revision_candidates()
   return vim.list_extend({ "HEAD", default_compare_revision }, require("git_tools.revisions").list())
 end
 
-function M.setup(git)
+function M.resolve(git, opts)
+  assert(opts == nil or type(opts) == "table", "command must be a table")
+  local default = opts and opts.default
+  assert(default == nil or type(default) == "string", "command.default must be an action name")
+
   local function action(name, method)
     return {
       name = name,
@@ -20,8 +25,28 @@ function M.setup(git)
     }
   end
 
-  registry.create_group("GitTools", {
-    default = "status",
+  return user_command.group("GitTools", {
+    default = default or "menu",
+    menu = {
+      items = function()
+        return {
+          { id = "status", label = "Changed files", run = git.status },
+          { id = "changes", label = "Change hunks", run = git.changes },
+          { id = "compare", label = "Compare working tree", run = git.compare },
+          {
+            id = "last_commit",
+            label = "Compare last commit",
+            run = function()
+              return git.compare({ commit = "HEAD" })
+            end,
+          },
+          { id = "log", label = "Commit history", run = git.log },
+          { id = "branches", label = "Branches", run = git.branches },
+          { id = "stash", label = "Stash", run = git.stash },
+          { id = "lazygit", label = "LazyGit", run = git.lazygit },
+        }
+      end,
+    },
     actions = {
       action("status"),
       action("changes"),
@@ -61,8 +86,15 @@ function M.setup(git)
   }, { range = true })
 end
 
+function M.setup(definition)
+  registry = registry or user_command.new()
+  registry.create(unpack(definition))
+end
+
 function M.dispose()
-  registry.delete("GitTools")
+  if registry then
+    registry.delete("GitTools")
+  end
 end
 
 return M

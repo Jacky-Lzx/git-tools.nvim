@@ -73,6 +73,7 @@ function M.setup(opts)
   local terminal_options = lazygit.resolve(opts.lazygit or {})
   local buffer_options = opts.buffer ~= false and buffers.resolve(opts.buffer) or nil
   local commands = require("git_tools.commands")
+  local command = commands.resolve(M, opts.command)
   compare.configure(panel_keymap)
   window.configure(diff_options)
   lazygit.configure(terminal_options)
@@ -82,7 +83,7 @@ function M.setup(opts)
     buffers.dispose()
   end
 
-  commands.setup(M)
+  commands.setup(command)
   configured = true
 end
 
