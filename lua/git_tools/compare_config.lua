@@ -1,7 +1,7 @@
 local keymaps = require("base_tools.keymap")
 local M = {}
 
-local default_keys = { open = "<CR>", next_file = "<Tab>", refresh = "R", close = "q" }
+local default_panel = require("git_tools.config").defaults("compare", "keymap", "panel")
 local actions = {
   open = { order = 1, hint = "open", desc = "Open file diff or toggle folder", method = "open_panel_row" },
   next_file = { order = 2, hint = "next", desc = "Show next changed file", method = "next_file" },
@@ -47,7 +47,7 @@ end
 
 local function legacy_panel_keymap(keys)
   local keymap = {}
-  for action, default in pairs(default_keys) do
+  for default, action in pairs(default_panel) do
     local lhs = keys[action]
     if lhs == nil then
       lhs = default
@@ -64,23 +64,32 @@ local function legacy_panel_keymap(keys)
   return keymap
 end
 
-local defaults = resolve_panel(legacy_panel_keymap({}))
+local defaults = resolve_panel(default_panel)
 M.panel_keymap = defaults
 
-function M.resolve(opts)
+function M.normalize(opts)
   assert(opts == nil or type(opts) == "table", "compare options must be a table")
-  opts = opts or {}
+  if not opts then
+    return
+  end
   local keymap = opts.keymap
   assert(keymap == nil or type(keymap) == "table", "compare.keymap must be a table")
-  if keymap and keymap.panel ~= nil then
-    return resolve_panel(keymap.panel)
+  if opts.panel_keys == nil then
+    return opts
   end
 
-  if opts.panel_keys ~= nil then
+  -- Translate legacy keys before the defaults supply a panel.
+  local normalized = vim.tbl_extend("force", {}, opts)
+  normalized.panel_keys = nil
+  if not keymap or keymap.panel == nil then
     assert(type(opts.panel_keys) == "table", "compare.panel_keys must be a table")
-    return resolve_panel(legacy_panel_keymap(opts.panel_keys))
+    normalized.keymap = vim.tbl_extend("force", {}, keymap or {}, { panel = legacy_panel_keymap(opts.panel_keys) })
   end
-  return defaults
+  return normalized
+end
+
+function M.resolve(opts)
+  return resolve_panel(opts.keymap.panel)
 end
 
 function M.configure(bindings)

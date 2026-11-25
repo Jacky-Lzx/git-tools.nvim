@@ -12,10 +12,10 @@ local function complete(line)
 end
 local wildoptions = vim.o.wildoptions
 vim.o.wildoptions = ""
-assert(#complete("GitTools ") == 19)
+assert(#complete("GitTools ") == 20)
 assert(vim.deep_equal(complete("GitTools men"), { "menu" }))
-assert(vim.deep_equal(complete("GitTools co"), { "compare" }))
-assert(vim.deep_equal(complete("set number | GitTools co"), { "compare" }))
+assert(vim.deep_equal(complete("GitTools co"), { "compare", "config" }))
+assert(vim.deep_equal(complete("set number | GitTools co"), { "compare", "config" }))
 assert(vim.deep_equal(complete("GitTools compare"), { "compare" }))
 assert(vim.deep_equal(vim.list_slice(complete("silent 1,2GitT compare "), 1, 2), { "HEAD", "HEAD~1" }))
 assert(vim.deep_equal(complete("GitTools compare HEAD HEAD~"), { "HEAD~1" }))

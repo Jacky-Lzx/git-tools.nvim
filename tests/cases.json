@@ -9,6 +9,7 @@
     "SELECTION_TOOLS_DIR": "{root}/../selection-tools.nvim"
   },
   "requires": [
+    "path:{root}/../base-tools.nvim/lua/base_tools/config.lua",
     "path:{root}/../base-tools.nvim/lua/base_tools/user_command.lua",
     "path:{root}/../base-tools.nvim/lua/base_tools/process.lua",
     "path:{root}/../base-tools.nvim/lua/base_tools/keymap.lua",
@@ -60,6 +61,25 @@
       ],
       "files": [
         "tests/revision_completion.lua"
+      ],
+      "timeout": 90
+    },
+    {
+      "name": "config",
+      "suite": "unit",
+      "command": [
+        "{nvim}",
+        "--headless",
+        "-u",
+        "tests/minimal_init.lua",
+        "-i",
+        "NONE",
+        "--noplugin",
+        "-l",
+        "tests/config.lua"
+      ],
+      "files": [
+        "tests/config.lua"
       ],
       "timeout": 90
     },
@@ -694,7 +714,7 @@
   "fixtures": {
     "base-tools.nvim": {
       "repository": "Jacky-Lzx/base-tools.nvim",
-      "revision": "11118bf95b40cba3b2b9c479ad79ba16baf03995",
+      "revision": "e745cdebd44d1ebb1051b65c730f61578e290f29",
       "path": "{root}/../base-tools.nvim"
     },
     "selection-tools.nvim": {

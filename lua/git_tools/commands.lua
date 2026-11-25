@@ -1,4 +1,5 @@
 local user_command = require("base_tools.user_command")
+local config = require("git_tools.config")
 local M = {}
 local registry
 local default_compare_revision = "HEAD~1"
@@ -9,6 +10,28 @@ end
 
 local function revision_candidates()
   return vim.list_extend({ "HEAD", default_compare_revision }, require("git_tools.revisions").list())
+end
+
+local function config_value(git, path)
+  if not path or path == "" then
+    return git.get_config()
+  end
+  return git.get_config(unpack(vim.split(path, ".", { plain = true })))
+end
+
+local function config_candidates(git, lead)
+  local prefix = lead:match("^(.*%.)") or ""
+  local section = config_value(git, prefix:sub(1, -2))
+  local paths = {}
+  if type(section) == "table" then
+    for key in pairs(section) do
+      if type(key) == "string" and not key:find(".", 1, true) then
+        paths[#paths + 1] = prefix .. key
+      end
+    end
+    table.sort(paths)
+  end
+  return paths
 end
 
 function M.resolve(git, opts)
@@ -26,7 +49,7 @@ function M.resolve(git, opts)
   end
 
   return user_command.group("GitTools", {
-    default = default or "menu",
+    default = default or config.defaults("command", "default"),
     menu = {
       items = function()
         return {
@@ -82,6 +105,18 @@ function M.resolve(git, opts)
       action("stage_buffer"),
       action("unstage_buffer"),
       action("reset_buffer"),
+      {
+        name = "config",
+        run = function(command)
+          assert(#command.fargs <= 2, "Usage: GitTools config [option.path]")
+          vim.api.nvim_echo({ { vim.inspect(config_value(git, command.fargs[2])) } }, true, {})
+        end,
+        complete = {
+          function(ctx)
+            return config_candidates(git, ctx.lead)
+          end,
+        },
+      },
     },
   }, { range = true })
 end

@@ -1,8 +1,8 @@
 -- Own the floating terminal, session theme and job; LazyGit owns the Git interface.
 local api = vim.api
 local M = {}
-local defaults = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded", theme = true }
-local initial = vim.deepcopy(defaults)
+local initial = require("git_tools.config").defaults("lazygit")
+local defaults = vim.deepcopy(initial)
 
 local function dimension(value, available)
   assert(

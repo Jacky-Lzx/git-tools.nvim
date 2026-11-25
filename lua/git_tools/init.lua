@@ -2,6 +2,10 @@
 local M = { diff = require("git_tools.diff") }
 local configured = false
 
+function M.get_config(...)
+  return require("git_tools.config").get(...)
+end
+
 -- Snapshot only already-loaded providers; never start Git or create a view.
 function M.get_state(opts)
   opts = opts or {}
@@ -63,14 +67,18 @@ end
 
 function M.setup(opts)
   assert(opts == nil or type(opts) == "table", "git-tools.nvim: setup expects a table")
-  opts = vim.deepcopy(opts or {})
-  opts = opts or {}
+  opts = vim.tbl_extend("force", {}, opts or {})
+  local config = require("git_tools.config")
   local window, lazygit = require("git_tools.diff.window"), require("git_tools.lazygit")
   local compare = require("git_tools.compare_config")
   local buffers = require("git_tools.buffer")
+  opts.compare = compare.normalize(opts.compare)
+  opts.diff = opts.diff or nil
+  opts.lazygit = opts.lazygit or nil
+  opts = config.resolve(opts)
   local panel_keymap = compare.resolve(opts.compare)
-  local diff_options = window.resolve(opts.diff or {})
-  local terminal_options = lazygit.resolve(opts.lazygit or {})
+  local diff_options = window.resolve(opts.diff)
+  local terminal_options = lazygit.resolve(opts.lazygit)
   local buffer_options = opts.buffer ~= false and buffers.resolve(opts.buffer) or nil
   local commands = require("git_tools.commands")
   local command = commands.resolve(M, opts.command)
@@ -84,6 +92,7 @@ function M.setup(opts)
   end
 
   commands.setup(command)
+  config.publish(opts)
   configured = true
 end
 
@@ -106,6 +115,10 @@ function M.dispose()
   local commands = package.loaded["git_tools.commands"]
   if commands then
     commands.dispose()
+  end
+  local config = package.loaded["git_tools.config"]
+  if config then
+    config.publish()
   end
 end
 

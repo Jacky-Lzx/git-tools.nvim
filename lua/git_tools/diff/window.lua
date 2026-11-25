@@ -1,12 +1,13 @@
 local M = {}
 local api = vim.api
-local defaults = { wrap = false }
+local initial = require("git_tools.config").defaults("diff")
+local defaults = initial
 
 function M.resolve(opts)
   assert(opts == nil or type(opts) == "table", "diff options must be a table")
   opts = opts or {}
   assert(opts.wrap == nil or type(opts.wrap) == "boolean", "diff.wrap must be boolean")
-  return { wrap = opts.wrap == true }
+  return vim.tbl_extend("force", {}, initial, { wrap = opts.wrap })
 end
 
 function M.configure(opts)

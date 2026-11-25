@@ -12,7 +12,7 @@ git.status = function(args)
   calls = calls + 1
 end
 
-local opts = { buffer = false }
+local opts = { buffer = false, command = { default = "status" } }
 git.setup(opts)
 git.setup(opts)
 assert(not package.loaded["git_tools.revisions"], "Command registration must not load revision completion")

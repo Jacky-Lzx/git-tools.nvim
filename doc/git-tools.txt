@@ -48,6 +48,18 @@ Options are passed to require("git_tools").setup(opts). The quick start is an
 example, not a dump of defaults. Detailed configuration and examples follow
 below.
 
+git_tools.get_config(...)                              *git-tools-get-config*
+    Get a copy of the options from the last successful setup(), or the
+    defaults before setup() and after dispose(). Pass keys separately to
+    read a nested value, e.g. get_config("buffer", "signs"). Every read
+    preserves false and returns nil for missing keys. Setup resolves legacy
+    compare.panel_keys to compare.keymap.panel. Runtime toggles are reported
+    by |git-tools-reference-read-only-state|.
+
+    `:GitTools config` prints the full snapshot. Use an option path, e.g.
+    `:GitTools config buffer.signs`, to inspect a single value. Option paths
+    can be completed on the command line.
+
 API                                                            *git-tools-api*
 
 require("git_tools").diff and require("git_tools.diff") expose the same
@@ -224,7 +236,7 @@ git_tools.merge(opts)                                        *git-tools-merge*
     Missing sides are empty; deleting a result remains an explicit Git action.
 
 :GitTools [action] [revision [revision]]                           *:GitTools*
-    Installed by setup(). Default action: status. Also log, file_history,
+    Installed by setup(). Default action: menu. Also status, log, file_history,
     line_history, blame, browse, compare, merge, lazygit, stage, unstage,
         reset and
     *_buffer variants. compare accepts from/to; log accepts a revision.
@@ -239,8 +251,8 @@ git_tools.merge(opts)                                        *git-tools-merge*
 
     `:GitTools menu` opens the Git action menu through |vim.ui.select()|.
     It offers changed files, hunks, working-tree and last-commit comparisons,
-    history, branches, stash, and LazyGit. To open it with `:GitTools` alone,
-    set `command = { default = "menu" }` in setup(). The default is "status".
+    history, branches, stash, and LazyGit. To open changed files with
+    `:GitTools` alone, set `command = { default = "status" }` in setup().
 
 git_tools.branches(opts)                                  *git-tools-branches*
     Local branch picker; all=true includes remote refs. Recent commit preview.

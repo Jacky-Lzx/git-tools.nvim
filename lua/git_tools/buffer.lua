@@ -1,6 +1,6 @@
 local api, uv = vim.api, vim.uv
 local git, h = require("git_tools.git"), require("git_tools.hunks")
-local defaults = { signs = false, numhl = true, word_diff = false, line_blame = false, debounce = 100 }
+local defaults = require("git_tools.config").defaults("buffer")
 local M = { states = {}, config = vim.deepcopy(defaults) }
 local ns = api.nvim_create_namespace("GitToolsSigns")
 local overlay_ns = api.nvim_create_namespace("GitToolsOverlay")
