@@ -22,7 +22,7 @@ end
 
 local function refresh()
   -- checktime respects modified buffers; it never force-reloads unsaved text.
-  pcall(vim.cmd, "checktime")
+  pcall(vim.cmd.checktime)
 
   local buffers = package.loaded["git_tools.buffer"]
   if buffers then
@@ -78,7 +78,7 @@ function M.open(opts)
     return failure("Terminal directory does not exist: " .. cwd)
   end
 
-  local config = vim.tbl_extend(
+  local win_config = vim.tbl_extend(
     "force",
     geometry(opts),
     { relative = "editor", style = "minimal", border = opts.border, title = " Lazygit ", title_pos = "center" }
@@ -129,7 +129,7 @@ function M.open(opts)
   end
   vim.bo[session.buf].bufhidden = "wipe"
   vim.bo[session.buf].swapfile = false
-  local opened, win = pcall(api.nvim_open_win, session.buf, true, config)
+  local opened, win = pcall(api.nvim_open_win, session.buf, true, win_config)
   if not opened then
     session:close(false)
     return failure(tostring(win))
