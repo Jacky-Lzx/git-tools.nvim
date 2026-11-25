@@ -75,7 +75,7 @@ function M.setup(opts)
   opts.compare = compare.normalize(opts.compare)
   opts.diff = opts.diff or nil
   opts.lazygit = opts.lazygit or nil
-  config:commit(config:resolve(opts), function(candidate)
+  config:configure(opts, function(candidate)
     local panel_keymap = compare.resolve(candidate.compare)
     local diff_options = window.resolve(candidate.diff)
     local terminal_options = lazygit.resolve(candidate.lazygit)
