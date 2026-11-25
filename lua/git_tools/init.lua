@@ -2,62 +2,23 @@
 local M = { diff = require("git_tools.diff") }
 local configured = false
 
-local command_actions = {
-  "status",
-  "changes",
-  "branches",
-  "stash",
-  "log",
-  "file_history",
-  "line_history",
-  "blame",
-  "browse",
-  "compare",
-  "merge",
-  "lazygit",
-  "stage",
-  "unstage",
-  "reset",
-  "stage_buffer",
-  "unstage_buffer",
-  "reset_buffer",
-}
-local command_aliases = { stage = "stage_hunk", unstage = "unstage_hunk", reset = "reset_hunk" }
-local revision_arguments = { compare = 2, log = 1 }
 local default_compare_revision = "HEAD~1"
 
-local function complete_command(lead, line, cursor)
-  local before = line:sub(1, cursor - #lead)
-  local ok, parsed = pcall(vim.api.nvim_parse_cmd, before, {})
-  while ok and parsed.nextcmd ~= "" do
-    ok, parsed = pcall(vim.api.nvim_parse_cmd, parsed.nextcmd, {})
-  end
+local function command_options(command)
+  return command.range > 0 and { range = { command.line1, command.line2 } } or {}
+end
 
-  if not ok or parsed.cmd ~= "GitTools" then
-    return {}
-  end
+local function command_action(name, method)
+  return {
+    name = name,
+    run = function(command)
+      return M[method or name](command_options(command))
+    end,
+  }
+end
 
-  local args = parsed.args
-  local candidates
-  if #args == 0 then
-    candidates = command_actions
-  elseif #args <= (revision_arguments[args[1]] or 0) then
-    candidates = vim.list_extend({ "HEAD", default_compare_revision }, require("git_tools.revisions").list())
-  else
-    return {}
-  end
-
-  if lead == "" then
-    return candidates
-  end
-
-  if vim.tbl_contains(vim.opt.wildoptions:get(), "fuzzy") then
-    return vim.fn.matchfuzzy(candidates, lead)
-  end
-
-  return vim.tbl_filter(function(candidate)
-    return vim.startswith(candidate, lead)
-  end, candidates)
+local function revision_candidates()
+  return vim.list_extend({ "HEAD", default_compare_revision }, require("git_tools.revisions").list())
 end
 
 -- Snapshot only already-loaded providers; never start Git or create a view.
@@ -140,32 +101,45 @@ function M.setup(opts)
     buffers.dispose()
   end
 
-  commands.create("GitTools", function(command)
-    local name = command.fargs[1] or "status"
-    local action = vim.tbl_contains(command_actions, name) and M[command_aliases[name] or name]
-    if not action then
-      error("Unknown GitTools action: " .. name)
-    end
-
-    local args = {}
-    if name == "compare" then
-      args.from, args.to = command.fargs[2] or default_compare_revision, command.fargs[3]
-    end
-
-    if name == "log" then
-      args.rev = command.fargs[2]
-    end
-
-    if command.range > 0 then
-      args.range = { command.line1, command.line2 }
-    end
-
-    action(args)
-  end, {
-    nargs = "*",
-    range = true,
-    complete = complete_command,
-  })
+  commands.create_group("GitTools", {
+    default = "status",
+    actions = {
+      command_action("status"),
+      command_action("changes"),
+      command_action("branches"),
+      command_action("stash"),
+      {
+        name = "log",
+        run = function(command)
+          local args = command_options(command)
+          args.rev = command.fargs[2]
+          return M.log(args)
+        end,
+        complete = { revision_candidates },
+      },
+      command_action("file_history"),
+      command_action("line_history"),
+      command_action("blame"),
+      command_action("browse"),
+      {
+        name = "compare",
+        run = function(command)
+          local args = command_options(command)
+          args.from, args.to = command.fargs[2] or default_compare_revision, command.fargs[3]
+          return M.compare(args)
+        end,
+        complete = { revision_candidates, revision_candidates },
+      },
+      command_action("merge"),
+      command_action("lazygit"),
+      command_action("stage", "stage_hunk"),
+      command_action("unstage", "unstage_hunk"),
+      command_action("reset", "reset_hunk"),
+      command_action("stage_buffer"),
+      command_action("unstage_buffer"),
+      command_action("reset_buffer"),
+    },
+  }, { range = true })
   configured = true
 end
 
