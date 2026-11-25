@@ -52,7 +52,7 @@ end
 
 function M.buffer_instance(opts)
   local store = require("base_tools.config").new({ buffer = configuration().buffer })
-  store:commit({ buffer = opts })
+  store:change({ "buffer" }, opts)
   return store
 end
 

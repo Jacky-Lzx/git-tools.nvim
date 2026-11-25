@@ -499,10 +499,7 @@ end
 
 function M.resolve(opts)
   assert(opts == nil or type(opts) == "table", "buffer options must be a table")
-  local store = config.instance()
-  local candidate = store:resolve({ buffer = opts })
-  store:check(candidate)
-  return candidate.buffer
+  return config.instance():resolve({ buffer = opts }).buffer
 end
 
 function M.dispose()
