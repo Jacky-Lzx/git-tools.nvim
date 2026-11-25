@@ -24,11 +24,12 @@ rejects(git.toggle, "buffer.signs must be boolean", "signs", "yes")
 assert(not git.get_state().signs)
 local buffers = require("git_tools.buffer")
 local function on_attach() end
+local env_value = [=[路径 = "quoted", it's a \ path]=]
 
 local opts = {
   buffer = { debounce = 75, on_attach = on_attach },
   diff = { wrap = true },
-  lazygit = { args = { "--example" } },
+  lazygit = { args = { "--example" }, env = { ["DISPLAY-NAME"] = env_value } },
   compare = { panel_keys = { close = "Q", refresh = false } },
 }
 local original = vim.deepcopy(opts)
@@ -82,25 +83,36 @@ rejects(git.toggle, "buffer.debounce must be boolean to toggle", "debounce", 200
 assert(buffers.config.signs == true and buffers.config.debounce == 75)
 assert(vim.deep_equal(store:get(), snapshot), "Invalid setup must not publish a new snapshot")
 
-local echo, message = api.nvim_echo
-api.nvim_echo = function(chunks)
-  message = chunks[1][1]
+local echo, message, highlights = api.nvim_echo
+api.nvim_echo = function(chunks, history)
+  assert(history, "Config output must be retained in message history")
+  local parts = {}
+  highlights = {}
+  for i, chunk in ipairs(chunks) do
+    parts[i] = chunk[1]
+    highlights[chunk[1]] = chunk[2]
+  end
+  message = table.concat(parts)
 end
 vim.o.wildoptions = ""
 assert(vim.deep_equal(vim.fn.getcompletion("GitTools config buffer.si", "cmdline", true), { "buffer.signs" }))
 vim.cmd("GitTools config buffer.signs")
-assert(message == "true")
+assert(message == "true" and highlights[message] == "Boolean")
 git.toggle("signs", false)
 assert(not git.get_state().signs and store:get("buffer", "signs") == false)
 snapshot.buffer.signs = false
 vim.cmd("GitTools config buffer.signs")
-assert(message == "false")
+assert(message == "false" and highlights[message] == "Boolean")
 vim.cmd("GitTools config diff.wrap")
 assert(message == "true")
 vim.cmd("GitTools config missing.path")
-assert(message == "nil")
+assert(message == "nil" and highlights[message] == "Constant")
 vim.cmd("GitTools config")
 assert(message == vim.inspect(snapshot))
+assert(highlights.debounce == "Identifier" and highlights["75"] == "Number" and highlights["0.9"] == "Number")
+assert(highlights[vim.inspect("DISPLAY-NAME")] == "Identifier")
+assert(highlights[vim.inspect(env_value)] == "String")
+assert(highlights[vim.inspect(on_attach)] == "Special")
 api.nvim_echo = echo
 
 local buf = api.nvim_create_buf(false, true)

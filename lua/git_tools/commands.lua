@@ -35,6 +35,57 @@ local function config_candidates(lead)
   return paths
 end
 
+local literal_groups = { ["true"] = "Boolean", ["false"] = "Boolean", ["nil"] = "Constant", ["vim.NIL"] = "Constant" }
+
+local function quoted_end(text, first, quote)
+  local cursor = first + 1
+  while cursor <= #text do
+    local char = text:sub(cursor, cursor)
+    if char == quote then
+      return cursor
+    end
+    cursor = cursor + (char == "\\" and 2 or 1)
+  end
+  return #text
+end
+
+local function inspect_chunks(value)
+  local text = vim.inspect(value)
+  local chunks, cursor, plain = {}, 1, 1
+  while cursor <= #text do
+    local char = text:sub(cursor, cursor)
+    local last, group
+    if char == '"' or char == "'" then
+      last, group = quoted_end(text, cursor, char), "String"
+    elseif char == "<" then
+      -- Inspect prints functions, shared tables and metatables in angle brackets.
+      local _, token_end = text:find("^<[^<>\n]+>", cursor)
+      last, group = token_end, "Special"
+    else
+      local _, token_end, token = text:find("^(%-?[%w_][%w_.+%-]*)", cursor)
+      last = token_end
+      if token then
+        group = literal_groups[token] or (tonumber(token) and "Number")
+      end
+    end
+    if last and group ~= "Special" and text:find("^%]?%s*=", last + 1) then
+      group = "Identifier"
+    end
+    if last and group then
+      if plain < cursor then
+        chunks[#chunks + 1] = { text:sub(plain, cursor - 1) }
+      end
+      chunks[#chunks + 1] = { text:sub(cursor, last), group }
+      plain = last + 1
+    end
+    cursor = (last or cursor) + 1
+  end
+  if plain <= #text then
+    chunks[#chunks + 1] = { text:sub(plain) }
+  end
+  return chunks
+end
+
 function M.resolve(git, opts)
   assert(opts == nil or type(opts) == "table", "command must be a table")
   local default = opts and opts.default
@@ -110,7 +161,7 @@ function M.resolve(git, opts)
         name = "config",
         run = function(command)
           assert(#command.fargs <= 2, "Usage: GitTools config [option.path]")
-          vim.api.nvim_echo({ { vim.inspect(config_value(command.fargs[2])) } }, true, {})
+          vim.api.nvim_echo(inspect_chunks(config_value(command.fargs[2])), true, {})
         end,
         complete = {
           function(ctx)
