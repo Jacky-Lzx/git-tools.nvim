@@ -7,14 +7,15 @@ local standalone_defaults = {
   lazygit = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded", theme = true },
 }
 
-local defined_defaults, definition_options
+local definition
 
 local function configuration()
-  if not defined_defaults then
-    local config = require("base_tools.config")
+  if not definition then
     local validators = require("base_tools.config.validators")
     local boolean = validators.type("boolean")
-    defined_defaults, definition_options = config.compile_definition({
+    definition = {
+      diff = { default = standalone_defaults.diff },
+      lazygit = { default = standalone_defaults.lazygit },
       buffer = {
         default_choice = "enabled",
         choices = {
@@ -44,14 +45,15 @@ local function configuration()
         },
       },
       command = { fields = { default = { default = "menu" } } },
-    })
+    }
   end
-  return defined_defaults, definition_options
+  return definition
 end
 
 function M.buffer_instance(opts)
-  local _, options = configuration()
-  return require("base_tools.config").new({ buffer = opts }, { schema = { buffer = options.schema.buffer } })
+  local store = require("base_tools.config").new({ buffer = configuration().buffer })
+  store:commit({ buffer = opts })
+  return store
 end
 
 function M.defaults(...)
@@ -59,18 +61,16 @@ function M.defaults(...)
   if standalone_defaults[section] ~= nil then
     return vim.deepcopy(vim.tbl_get(standalone_defaults, ...))
   end
-  local defined = configuration()
+  local defaults = M.instance():resolve()
   if select("#", ...) == 0 then
-    return vim.deepcopy(vim.tbl_extend("force", standalone_defaults, defined))
+    return defaults
   end
-  return vim.deepcopy(vim.tbl_get(defined, ...))
+  return vim.tbl_get(defaults, ...)
 end
 
 function M.instance()
   if not instance then
-    local config = require("base_tools.config")
-    local defined, options = configuration()
-    instance = config.new(vim.tbl_extend("force", standalone_defaults, defined), options)
+    instance = require("base_tools.config").new(configuration())
   end
   return instance
 end
