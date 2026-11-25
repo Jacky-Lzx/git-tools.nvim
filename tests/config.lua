@@ -18,9 +18,10 @@ assert(git.get_config("buffer", "signs") == false, "A default snapshot must be d
 rejects(git.toggle, "buffer.signs must be boolean", "signs", "yes")
 assert(not git.get_state().signs)
 local buffers = require("git_tools.buffer")
+local function on_attach() end
 
 local opts = {
-  buffer = { debounce = 75 },
+  buffer = { debounce = 75, on_attach = on_attach },
   diff = { wrap = true },
   lazygit = { args = { "--example" } },
   compare = { panel_keys = { close = "Q", refresh = false } },
@@ -29,6 +30,7 @@ local original = vim.deepcopy(opts)
 git.setup(opts)
 assert(vim.deep_equal(opts, original), "Setup must retain the caller's legacy options")
 assert(git.get_config("buffer", "numhl") == true and git.get_config("buffer", "debounce") == 75)
+assert(git.get_config("buffer", "on_attach") == on_attach)
 assert(git.get_config("diff", "wrap") == true)
 assert(git.get_config("lazygit", "width") == 0.9 and git.get_config("lazygit", "args", 1) == "--example")
 assert(git.get_config("compare", "panel_keys") == nil)
@@ -50,11 +52,15 @@ local snapshot = git.get_config()
 local store = require("git_tools.config").instance()
 local debounce_path = { "buffer", "debounce" }
 store:validate(debounce_path, 0)
-rejects(store.validate, "buffer.debounce must be a finite nonnegative number", store, debounce_path, math.huge)
-rejects(git.setup, "buffer.debounce must be a finite nonnegative number", { buffer = { debounce = -1 } })
+store:validate(debounce_path, 0.5)
+local debounce_error = "buffer.debounce must be a finite number greater than or equal to 0"
+rejects(store.validate, debounce_error, store, debounce_path, math.huge)
+rejects(git.setup, debounce_error, { buffer = { debounce = -1 } })
+rejects(git.setup, "buffer.on_attach must be function", { buffer = { on_attach = false } })
+rejects(git.setup, "buffer must be a table or false", { buffer = true })
 rejects(git.setup, "buffer.signs must be boolean", { buffer = { signs = "yes" } })
 rejects(git.toggle, "buffer.signs must be boolean", "signs", "yes")
-rejects(git.toggle, "Unknown buffer toggle: debounce", "debounce", true)
+rejects(git.toggle, "buffer.debounce must be boolean to toggle", "debounce", 200)
 assert(buffers.config.signs == true and buffers.config.debounce == 75)
 assert(vim.deep_equal(git.get_config(), snapshot), "Invalid setup must not publish a new snapshot")
 
@@ -111,6 +117,7 @@ assert(#vim.fn.getcompletion("GitTools config buffer.", "cmdline", true) == 0)
 assert(git.toggle("signs", true) and git.get_config("buffer") == false)
 rejects(git.toggle, "buffer.signs must be boolean", "signs", "no")
 assert(buffers.config.signs == true and git.get_config("buffer") == false)
+assert(git.toggle("signs") == false and buffers.config.signs == false and git.get_config("buffer") == false)
 
 git.setup()
 assert(git.get_config("buffer", "debounce") == 100 and git.get_config("compare", "keymap", "panel", "q") == "close")

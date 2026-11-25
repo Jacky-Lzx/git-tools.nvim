@@ -129,8 +129,8 @@ git_tools.setup({buffer={...}})                             *git-tools-buffer*
         snapshot.
     nav_hunk("next"|"prev"|"first"|"last"), select_hunk(), preview_hunk(),
     toggle_overlay(buf), get_hunks(buf), toggle(name,optional_boolean).
-    toggle() accepts signs, numhl, word_diff and line_blame. Omit the value
-    to invert the option. An explicit value must be a boolean.
+    toggle() accepts boolean buffer settings such as signs, numhl, word_diff
+    and line_blame. Omit the value to invert the option or supply a boolean.
 
 git_tools.stage_hunk(opts) / unstage_hunk(opts) / reset_hunk(opts)
                                                              *git-tools-hunks*

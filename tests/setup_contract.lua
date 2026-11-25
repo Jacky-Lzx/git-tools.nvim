@@ -47,10 +47,17 @@ plugin.setup(caller)
 assert(#vim.api.nvim_get_autocmds({}) == #handlers, "Repeated setup duplicated automatic handlers")
 
 local buffers = require("git_tools.buffer")
+local resolve = buffers.resolve
+buffers.resolve = function()
+  error("git.setup() must apply the buffer configuration already validated by BaseTools")
+end
 plugin.setup({ buffer = { debounce = 75, signs = true } })
+buffers.resolve = resolve
 local before = vim.deepcopy(buffers.config)
+assert(before.debounce == 75 and before.signs)
 local handlers = vim.api.nvim_get_autocmds({ group = "GitToolsBuffer" })
 assert(not pcall(plugin.setup, { buffer = { debounce = -1 } }))
+assert(not pcall(buffers.setup, { debounce = -1 }))
 assert(vim.deep_equal(before, buffers.config))
 assert(vim.deep_equal(handlers, vim.api.nvim_get_autocmds({ group = "GitToolsBuffer" })))
 plugin.setup()

@@ -89,7 +89,7 @@ function M.setup(opts)
     if candidate.buffer == false then
       buffers.dispose()
     else
-      buffers.setup(candidate.buffer)
+      buffers.apply(candidate.buffer)
     end
   end)
   configured = true

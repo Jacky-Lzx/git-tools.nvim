@@ -147,10 +147,11 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",
+        "--noplugin",
         "-l",
         "{root}/tests/highlights.lua"
       ],
@@ -714,7 +715,7 @@
   "fixtures": {
     "base-tools.nvim": {
       "repository": "Jacky-Lzx/base-tools.nvim",
-      "revision": "768d1b0f72435d0b48e737622734f135ec4bdd5d",
+      "revision": "1c5050bfb33cf5f033bb4314912ede5493e719a3",
       "path": "{root}/../base-tools.nvim"
     },
     "selection-tools.nvim": {

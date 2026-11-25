@@ -1,86 +1,76 @@
 local M = {}
 
-local defaults = {
-  buffer = { signs = false, numhl = true, word_diff = false, line_blame = false, debounce = 100 },
-  compare = {
-    keymap = { panel = { ["<CR>"] = "open", ["<Tab>"] = "next_file", R = "refresh", q = "close" } },
-  },
-  diff = { wrap = false },
-  lazygit = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded", theme = true },
-  command = { default = "menu" },
-}
 local instance
 
-local function boolean(value)
-  return type(value) == "boolean", "must be boolean"
-end
-
-local buffer_options = {
-  signs = boolean,
-  numhl = boolean,
-  word_diff = boolean,
-  line_blame = boolean,
-  debounce = function(value)
-    return type(value) == "number" and value >= 0 and value < math.huge, "must be a finite nonnegative number"
-  end,
-  on_attach = function(value)
-    return value == nil or type(value) == "function", "must be a function"
-  end,
+local standalone_defaults = {
+  diff = { wrap = false },
+  lazygit = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded", theme = true },
 }
 
-function M.assert_buffer_toggle(name)
-  assert(buffer_options[name] == boolean, "Unknown buffer toggle: " .. tostring(name))
-end
+local defined_defaults, definition_options
 
-function M.validate_buffer_option(name, value)
-  local valid, message = buffer_options[name](value)
-  assert(valid, "buffer." .. name .. " " .. message)
-end
-
-function M.validate_buffer(opts)
-  assert(type(opts) == "table", "buffer must be a table or false")
-  for name in pairs(buffer_options) do
-    M.validate_buffer_option(name, opts[name])
+local function configuration()
+  if not defined_defaults then
+    local config = require("base_tools.config")
+    local validators = require("base_tools.config.validators")
+    local boolean = validators.type("boolean")
+    defined_defaults, definition_options = config.compile_definition({
+      buffer = {
+        default_choice = "enabled",
+        choices = {
+          enabled = {
+            fields = {
+              signs = { default = false, validate = boolean },
+              numhl = { default = true, validate = boolean },
+              word_diff = { default = false, validate = boolean },
+              line_blame = { default = false, validate = boolean },
+              debounce = { default = 100, validate = validators.range(0) },
+              on_attach = { validate = validators.optional(validators.type("function")) },
+            },
+          },
+          disabled = { value = false },
+        },
+      },
+      compare = {
+        fields = {
+          keymap = {
+            fields = {
+              panel = {
+                default = { ["<CR>"] = "open", ["<Tab>"] = "next_file", R = "refresh", q = "close" },
+                replace = true,
+              },
+            },
+          },
+        },
+      },
+      command = { fields = { default = { default = "menu" } } },
+    })
   end
+  return defined_defaults, definition_options
 end
 
-local function buffer_fields()
-  local fields = {
-    {
-      path = { "buffer" },
-      validate = function(value)
-        return value == false or type(value) == "table", "must be a table or false"
-      end,
-    },
-  }
-  local names = vim.tbl_keys(buffer_options)
-  table.sort(names)
-  for _, name in ipairs(names) do
-    local validate = buffer_options[name]
-    fields[#fields + 1] = {
-      path = { "buffer", name },
-      validate = function(value, get)
-        if get("buffer") == false then
-          return true
-        end
-        return validate(value)
-      end,
-    }
-  end
-  return fields
+function M.buffer_instance(opts)
+  local _, options = configuration()
+  return require("base_tools.config").new({ buffer = opts }, { schema = { buffer = options.schema.buffer } })
 end
 
 function M.defaults(...)
-  -- Direct feature calls can use the built-in defaults before setup().
-  return vim.deepcopy(vim.tbl_get(defaults, ...))
+  local section = ...
+  if standalone_defaults[section] ~= nil then
+    return vim.deepcopy(vim.tbl_get(standalone_defaults, ...))
+  end
+  local defined = configuration()
+  if select("#", ...) == 0 then
+    return vim.deepcopy(vim.tbl_extend("force", standalone_defaults, defined))
+  end
+  return vim.deepcopy(vim.tbl_get(defined, ...))
 end
 
 function M.instance()
   if not instance then
-    instance = require("base_tools.config").new(defaults, {
-      replace = { { "compare", "keymap", "panel" } },
-      fields = buffer_fields(),
-    })
+    local config = require("base_tools.config")
+    local defined, options = configuration()
+    instance = config.new(vim.tbl_extend("force", standalone_defaults, defined), options)
   end
   return instance
 end

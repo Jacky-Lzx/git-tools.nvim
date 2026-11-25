@@ -429,18 +429,13 @@ function M.get_hunks(buf)
 end
 
 function M.toggle(name, value, store)
-  config.assert_buffer_toggle(name)
-  if value == nil then
-    value = not M.config[name]
+  if not store or store:get("buffer") == false then
+    -- Buffer-only changes leave the plugin's configuration snapshot intact.
+    store = config.buffer_instance(M.config)
   end
-  if store and store:get("buffer", name) ~= nil then
-    store:change({ "buffer", name }, value, function(candidate)
-      M.config[name] = candidate.buffer[name]
-    end)
-  else
-    config.validate_buffer_option(name, value)
-    M.config[name] = value
-  end
+  local updated = store:toggle({ "buffer", name }, value, function(candidate)
+    M.config[name] = candidate.buffer[name]
+  end)
 
   -- Redrawing emits GitToolsUpdate, so observers see the published value.
   for _, s in pairs(M.states) do
@@ -453,7 +448,7 @@ function M.toggle(name, value, store)
       end
     end
   end
-  return value
+  return updated
 end
 
 function M.toggle_overlay(buf)
@@ -504,9 +499,10 @@ end
 
 function M.resolve(opts)
   assert(opts == nil or type(opts) == "table", "buffer options must be a table")
-  local candidate = vim.tbl_extend("force", vim.deepcopy(defaults), vim.deepcopy(opts or {}))
-  config.validate_buffer(candidate)
-  return candidate
+  local store = config.instance()
+  local candidate = store:resolve({ buffer = opts })
+  store:check(candidate)
+  return candidate.buffer
 end
 
 function M.dispose()
@@ -520,8 +516,9 @@ function M.dispose()
   M.config = vim.deepcopy(defaults)
 end
 
-function M.setup(opts)
-  M.config = M.resolve(opts)
+-- Install a validated configuration. The caller provides a detached table.
+function M.apply(opts)
+  M.config = opts
   if group then
     api.nvim_del_augroup_by_id(group)
   end
@@ -589,6 +586,10 @@ function M.setup(opts)
       M.attach(buf)
     end
   end
+end
+
+function M.setup(opts)
+  M.apply(M.resolve(opts))
 end
 
 return M
