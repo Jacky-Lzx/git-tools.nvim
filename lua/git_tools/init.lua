@@ -2,25 +2,6 @@
 local M = { diff = require("git_tools.diff") }
 local configured = false
 
-local default_compare_revision = "HEAD~1"
-
-local function command_options(command)
-  return command.range > 0 and { range = { command.line1, command.line2 } } or {}
-end
-
-local function command_action(name, method)
-  return {
-    name = name,
-    run = function(command)
-      return M[method or name](command_options(command))
-    end,
-  }
-end
-
-local function revision_candidates()
-  return vim.list_extend({ "HEAD", default_compare_revision }, require("git_tools.revisions").list())
-end
-
 -- Snapshot only already-loaded providers; never start Git or create a view.
 function M.get_state(opts)
   opts = opts or {}
@@ -91,7 +72,7 @@ function M.setup(opts)
   local diff_options = window.resolve(opts.diff or {})
   local terminal_options = lazygit.resolve(opts.lazygit or {})
   local buffer_options = opts.buffer ~= false and buffers.resolve(opts.buffer) or nil
-  local commands = require("git_tools.user_command")
+  local commands = require("git_tools.commands")
   compare.configure(panel_keymap)
   window.configure(diff_options)
   lazygit.configure(terminal_options)
@@ -101,45 +82,7 @@ function M.setup(opts)
     buffers.dispose()
   end
 
-  commands.create_group("GitTools", {
-    default = "status",
-    actions = {
-      command_action("status"),
-      command_action("changes"),
-      command_action("branches"),
-      command_action("stash"),
-      {
-        name = "log",
-        run = function(command)
-          local args = command_options(command)
-          args.rev = command.fargs[2]
-          return M.log(args)
-        end,
-        complete = { revision_candidates },
-      },
-      command_action("file_history"),
-      command_action("line_history"),
-      command_action("blame"),
-      command_action("browse"),
-      {
-        name = "compare",
-        run = function(command)
-          local args = command_options(command)
-          args.from, args.to = command.fargs[2] or default_compare_revision, command.fargs[3]
-          return M.compare(args)
-        end,
-        complete = { revision_candidates, revision_candidates },
-      },
-      command_action("merge"),
-      command_action("lazygit"),
-      command_action("stage", "stage_hunk"),
-      command_action("unstage", "unstage_hunk"),
-      command_action("reset", "reset_hunk"),
-      command_action("stage_buffer"),
-      command_action("unstage_buffer"),
-      command_action("reset_buffer"),
-    },
-  }, { range = true })
+  commands.setup(M)
   configured = true
 end
 
@@ -159,9 +102,9 @@ function M.dispose()
   if compare then
     compare.configure()
   end
-  local commands = package.loaded["git_tools.user_command"]
+  local commands = package.loaded["git_tools.commands"]
   if commands then
-    commands.delete("GitTools")
+    commands.dispose()
   end
 end
 
