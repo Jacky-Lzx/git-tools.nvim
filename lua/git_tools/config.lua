@@ -9,28 +9,65 @@ local defaults = {
   lazygit = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded", theme = true },
   command = { default = "menu" },
 }
-local buffer_toggles = { "signs", "numhl", "word_diff", "line_blame" }
 local instance
 
-local function validate_toggle_value(name, value)
-  assert(type(value) == "boolean", "buffer." .. name .. " must be boolean")
+local function boolean(value)
+  return type(value) == "boolean", "must be boolean"
 end
 
-function M.validate_buffer_toggle(name, value)
-  assert(vim.tbl_contains(buffer_toggles, name), "Unknown buffer toggle: " .. tostring(name))
-  validate_toggle_value(name, value)
+local buffer_options = {
+  signs = boolean,
+  numhl = boolean,
+  word_diff = boolean,
+  line_blame = boolean,
+  debounce = function(value)
+    return type(value) == "number" and value >= 0 and value < math.huge, "must be a finite nonnegative number"
+  end,
+  on_attach = function(value)
+    return value == nil or type(value) == "function", "must be a function"
+  end,
+}
+
+function M.assert_buffer_toggle(name)
+  assert(buffer_options[name] == boolean, "Unknown buffer toggle: " .. tostring(name))
+end
+
+function M.validate_buffer_option(name, value)
+  local valid, message = buffer_options[name](value)
+  assert(valid, "buffer." .. name .. " " .. message)
 end
 
 function M.validate_buffer(opts)
   assert(type(opts) == "table", "buffer must be a table or false")
-  for _, name in ipairs(buffer_toggles) do
-    validate_toggle_value(name, opts[name])
+  for name in pairs(buffer_options) do
+    M.validate_buffer_option(name, opts[name])
   end
-  assert(
-    type(opts.debounce) == "number" and opts.debounce >= 0 and opts.debounce < math.huge,
-    "buffer.debounce must be a finite nonnegative number"
-  )
-  assert(opts.on_attach == nil or type(opts.on_attach) == "function", "buffer.on_attach must be a function")
+end
+
+local function buffer_fields()
+  local fields = {
+    {
+      path = { "buffer" },
+      validate = function(value)
+        return value == false or type(value) == "table", "must be a table or false"
+      end,
+    },
+  }
+  local names = vim.tbl_keys(buffer_options)
+  table.sort(names)
+  for _, name in ipairs(names) do
+    local validate = buffer_options[name]
+    fields[#fields + 1] = {
+      path = { "buffer", name },
+      validate = function(value, get)
+        if get("buffer") == false then
+          return true
+        end
+        return validate(value)
+      end,
+    }
+  end
+  return fields
 end
 
 function M.defaults(...)
@@ -42,11 +79,7 @@ function M.instance()
   if not instance then
     instance = require("base_tools.config").new(defaults, {
       replace = { { "compare", "keymap", "panel" } },
-      validate = function(candidate)
-        if candidate.buffer ~= false then
-          M.validate_buffer(candidate.buffer)
-        end
-      end,
+      fields = buffer_fields(),
     })
   end
   return instance

@@ -429,15 +429,16 @@ function M.get_hunks(buf)
 end
 
 function M.toggle(name, value, store)
+  config.assert_buffer_toggle(name)
   if value == nil then
     value = not M.config[name]
   end
-  config.validate_buffer_toggle(name, value)
   if store and store:get("buffer", name) ~= nil then
     store:change({ "buffer", name }, value, function(candidate)
       M.config[name] = candidate.buffer[name]
     end)
   else
+    config.validate_buffer_option(name, value)
     M.config[name] = value
   end
 

@@ -47,6 +47,10 @@ assert(git.toggle("numhl") == false and git.get_config("buffer", "numhl") == fal
 assert(git.toggle("word_diff") and git.get_config("buffer", "word_diff") == true)
 assert(git.toggle("line_blame") and git.get_config("buffer", "line_blame") == true)
 local snapshot = git.get_config()
+local store = require("git_tools.config").instance()
+local debounce_path = { "buffer", "debounce" }
+store:validate(debounce_path, 0)
+rejects(store.validate, "buffer.debounce must be a finite nonnegative number", store, debounce_path, math.huge)
 rejects(git.setup, "buffer.debounce must be a finite nonnegative number", { buffer = { debounce = -1 } })
 rejects(git.setup, "buffer.signs must be boolean", { buffer = { signs = "yes" } })
 rejects(git.toggle, "buffer.signs must be boolean", "signs", "yes")
