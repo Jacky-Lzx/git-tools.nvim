@@ -213,7 +213,7 @@ function M.open(opts)
       )
     end
   end
-  session.theme = require("git_tools.lazygit_theme").prepare(vim.tbl_extend("force", {}, opts, { cwd = cwd }))
+  session.theme = require("git_tools.lazygit.theme").prepare(vim.tbl_extend("force", {}, opts, { cwd = cwd }))
   local argv = vim.list_extend({ opts.command }, session.theme and session.theme.args or opts.args)
   local started, job = pcall(vim.fn.termopen, argv, {
     cwd = cwd,

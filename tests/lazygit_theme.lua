@@ -7,7 +7,7 @@ if vim.fn.isdirectory(theme_root) == 0 then
   return
 end
 vim.opt.rtp:prepend(theme_root)
-local themes, adapter = require("theme_tools"), require("git_tools.lazygit_theme")
+local themes, adapter = require("theme_tools"), require("git_tools.lazygit.theme")
 local api, uv = vim.api, vim.uv
 local dir = vim.fn.tempname() .. " space ' $(touch INJECTED)"
 vim.fn.mkdir(dir, "p")
