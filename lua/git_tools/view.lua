@@ -129,8 +129,12 @@ function M.blob(task, repo, revision, path, callback)
 end
 
 local function scratch(text, name, path)
-  local buf = scratch_buffer({ bufhidden = "wipe" })
-  api.nvim_buf_set_name(buf, "git-tools://" .. buf .. "/" .. name .. "/" .. path)
+  local buf = scratch_buffer({
+    bufhidden = "wipe",
+    name = function(id)
+      return "git-tools://" .. id .. "/" .. name .. "/" .. path
+    end,
+  })
   local parsed = require("git_tools.hunks").text(text)
   if text:find("\0", 1, true) then
     parsed.lines = { "Binary content: use the Git patch preview or an external viewer." }
