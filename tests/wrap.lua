@@ -1,7 +1,7 @@
 vim.opt.rtp:prepend(vim.env.GIT_TOOLS_ROOT or vim.fn.getcwd())
 local api = vim.api
+local git = require("git_tools")
 local diff, native = require("git_tools.diff"), require("git_tools.diff.native")
-local window = require("git_tools.diff.window")
 local before = 'local text = "' .. string.rep("旧é🙂", 12) .. '\tEND_OLD"'
 local after = 'local text = "' .. string.rep("新é🚀", 12) .. '\tEND_NEW"'
 local patch, source = diff.unified({ before }, { after }, { old_path = "wrap.lua", ft = "lua" })
@@ -126,7 +126,7 @@ for _, layout in ipairs({ "unified", "top_bottom", "side_by_side" }) do
 end
 local old_mapping = function() end
 vim.keymap.set("n", "<M-z>", old_mapping, { buffer = original })
-window.configure({ wrap = true })
+git.setup({ buffer = false, diff = { wrap = true } })
 local handle = diff.render(ctx, patch, { backend = "vim" })
 assert(vim.wo[win].wrap, "Configured default must apply to raw diff")
 toggle(original)
@@ -136,7 +136,7 @@ assert(vim.fn.maparg("<M-z>", "n", false, true).callback == old_mapping)
 handle = diff.render(ctx, patch, { backend = "vim", wrap = false })
 assert(not vim.wo[win].wrap, "Per-call false overrides the default")
 handle:close()
-window.configure({})
+git.dispose()
 
 local huge = native.prepare(diff.unified({ string.rep("a", 40000) }, { string.rep("b", 40000) }), {
   layout = "side_by_side",

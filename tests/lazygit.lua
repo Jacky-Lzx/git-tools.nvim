@@ -30,6 +30,7 @@ local opts = {
   args = { "space arg", "$(touch INJECTED)" },
 }
 local session = assert(tools.lazygit(opts))
+assert(not tools.get_state().initialized and not package.loaded["git_tools.buffer"], "LazyGit can run without setup")
 wait(function()
   return vim.fn.filereadable(record) == 1 and #vim.fn.readfile(record) >= 3
 end)

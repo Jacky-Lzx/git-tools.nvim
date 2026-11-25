@@ -69,7 +69,6 @@ function M.setup(opts)
   assert(opts == nil or type(opts) == "table", "git-tools.nvim: setup expects a table")
   opts = vim.tbl_extend("force", {}, opts or {})
   local config = require("git_tools.config").instance()
-  local window, lazygit = require("git_tools.diff.window"), require("git_tools.lazygit")
   local compare = require("git_tools.compare_config")
   local buffers = require("git_tools.buffer")
   opts.compare = compare.normalize(opts.compare)
@@ -77,14 +76,11 @@ function M.setup(opts)
   opts.lazygit = opts.lazygit or nil
   config:configure(opts, function(candidate)
     local panel_keymap = compare.resolve(candidate.compare)
-    local diff_options = window.resolve(candidate.diff)
     local commands = require("git_tools.commands")
     local command = commands.resolve(M, candidate.command)
 
     commands.setup(command)
     compare.configure(panel_keymap)
-    window.configure(diff_options)
-    lazygit.configure(candidate.lazygit)
     if candidate.buffer == false then
       buffers.dispose()
     else
@@ -101,10 +97,6 @@ function M.dispose()
     if module then
       module.dispose()
     end
-  end
-  local window = package.loaded["git_tools.diff.window"]
-  if window then
-    window.configure()
   end
   local compare = package.loaded["git_tools.compare_config"]
   if compare then

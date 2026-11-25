@@ -1,23 +1,9 @@
 local M = {}
 local api = vim.api
-local config = require("git_tools.config").section_instance("diff")
-
-local function overrides(opts)
-  assert(opts == nil or type(opts) == "table", "diff options must be a table")
-  opts = opts or {}
-  return { diff = { wrap = opts.wrap } }
-end
-
-function M.resolve(opts)
-  return config:resolve(overrides(opts)).diff
-end
-
-function M.configure(opts)
-  config:configure(overrides(opts))
-end
+local config = require("git_tools.config").instance():section("diff")
 
 function M.options(opts)
-  return vim.tbl_extend("force", config:get("diff"), opts or {})
+  return vim.tbl_extend("force", { wrap = config:get("wrap") }, opts or {})
 end
 
 -- Bind only while a diff owns the host. Picker state survives item replacement;

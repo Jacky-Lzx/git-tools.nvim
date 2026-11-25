@@ -1,8 +1,7 @@
 -- Own the floating terminal, session theme and job; LazyGit owns the Git interface.
 local api = vim.api
 local M = {}
-local config = require("git_tools.config").section_instance("lazygit")
-local lazygit_config = config:section("lazygit")
+local lazygit_config = require("git_tools.config").instance():section("lazygit")
 
 local function dimension(value, available)
   return math.max(1, math.min(available, math.floor(value <= 1 and available * value or value)))
@@ -33,14 +32,6 @@ local function refresh()
   end
 end
 
-function M.resolve(opts)
-  return config:resolve({ lazygit = opts }).lazygit
-end
-
-function M.configure(opts)
-  config:configure({ lazygit = opts })
-end
-
 function M.dispose()
   if M.current then
     local session = M.current
@@ -49,7 +40,6 @@ function M.dispose()
       and vim.bo[session.buf].modified
     session:close(false, keep)
   end
-  config:reset()
 end
 
 function M.open(opts)

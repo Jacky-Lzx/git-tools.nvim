@@ -9,15 +9,15 @@ vim.o.mouse = "a"
 vim.o.scrolloff, vim.o.sidescrolloff = 5, 8
 vim.g.mapleader = " "
 local tools = require("git_tools")
+local opts = { buffer = { debounce = 20 } }
 if vim.env.GIT_TOOLS_CONFIG then
   vim.opt.rtp:prepend(vim.env.GIT_TOOLS_CONFIG)
   local spec = dofile(vim.env.GIT_TOOLS_CONFIG .. "/lua/plugins/git/git-tools.lua")[1]
-  tools.setup(spec.opts)
+  opts = spec.opts
   for _, key in ipairs(spec.keys) do
     vim.keymap.set(key.mode or "n", key[1], key[2])
   end
 else
-  tools.setup({ buffer = { debounce = 20 } })
   vim.keymap.set("n", "<leader>to", tools.toggle_overlay)
   vim.keymap.set("x", "<leader>ggs", function()
     tools.stage_hunk({ range = { vim.fn.line("."), vim.fn.line("v") } })
@@ -25,9 +25,12 @@ else
   vim.keymap.set({ "o", "x" }, "ih", tools.select_hunk)
   vim.keymap.set("n", "<C-g>", tools.lazygit)
 end
-if vim.env.GIT_TOOLS_TEST_LAZYGIT_CONFIG then
-  require("git_tools.lazygit").configure({ args = { "--use-config-dir", vim.env.GIT_TOOLS_TEST_LAZYGIT_CONFIG } })
+local lazygit_config = vim.env.GIT_TOOLS_TEST_LAZYGIT_CONFIG
+if lazygit_config then
+  opts = vim.tbl_extend("force", {}, opts or {}, { lazygit = { args = { "--use-config-dir", lazygit_config } } })
 end
+tools.setup(opts)
+
 _G.git_tools_snapshot = function()
   local s = require("git_tools.buffer").states[vim.api.nvim_get_current_buf()]
   local result = {

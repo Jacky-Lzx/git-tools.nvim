@@ -9,31 +9,13 @@ end
 local commands, handlers = api.nvim_get_commands({}), api.nvim_get_autocmds({})
 local defaults = git.get_config()
 assert(defaults.buffer.signs == false and defaults.diff.wrap == false and defaults.command.default == "menu")
+assert(defaults.lazygit.width == 0.9)
 assert(defaults.compare.keymap.panel.q == "close")
 assert(not package.loaded["git_tools.commands"] and not package.loaded["git_tools.lazygit"])
 assert(not git.get_state().initialized and vim.deep_equal(api.nvim_get_commands({}), commands))
 assert(vim.deep_equal(api.nvim_get_autocmds({}), handlers))
 defaults.buffer.signs = true
 assert(git.get_config("buffer", "signs") == false, "A default snapshot must be detached")
-
-local base_config = require("base_tools.config")
-local new_config, definitions = base_config.new, {}
-base_config.new = function(definition)
-  definitions[#definitions + 1] = vim.tbl_keys(definition)
-  return new_config(definition)
-end
-local window = require("git_tools.diff.window")
-local lazygit = require("git_tools.lazygit")
-base_config.new = new_config
-assert(vim.deep_equal(definitions, { { "diff" }, { "lazygit" } }))
-assert(window.options().wrap == false and lazygit.resolve().width == 0.9)
-window.configure({ wrap = true })
-assert(window.options().wrap and not window.options({ wrap = false }).wrap)
-assert(git.get_config("diff", "wrap") == false)
-rejects(window.configure, "diff.wrap must be boolean", { wrap = "yes" })
-assert(window.options().wrap)
-window.configure()
-assert(window.options().wrap == false)
 
 rejects(git.toggle, "buffer.signs must be boolean", "signs", "yes")
 assert(not git.get_state().signs)
@@ -48,6 +30,13 @@ local opts = {
 }
 local original = vim.deepcopy(opts)
 git.setup(opts)
+assert(
+  not package.loaded["git_tools.diff.window"] and not package.loaded["git_tools.lazygit"],
+  "Setup must defer feature loading"
+)
+local window = require("git_tools.diff.window")
+assert(window.options().wrap and not window.options({ wrap = false }).wrap)
+rejects(git.setup, "diff.wrap must be boolean", { diff = { wrap = "yes" } })
 assert(vim.deep_equal(opts, original), "Setup must retain the caller's legacy options")
 assert(git.get_config("buffer", "numhl") == true and git.get_config("buffer", "debounce") == 75)
 assert(git.get_config("buffer", "on_attach") == on_attach)
