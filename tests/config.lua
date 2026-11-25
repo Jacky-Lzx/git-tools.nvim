@@ -1,6 +1,11 @@
 vim.opt.rtp:prepend(vim.fn.getcwd())
 local api = vim.api
 local git = require("git_tools")
+local function rejects(fn, message, ...)
+  local ok, err = pcall(fn, ...)
+  assert(not ok and tostring(err):find(message, 1, true), tostring(err))
+end
+
 local commands, handlers = api.nvim_get_commands({}), api.nvim_get_autocmds({})
 local defaults = git.get_config()
 assert(defaults.buffer.signs == false and defaults.diff.wrap == false and defaults.command.default == "menu")
@@ -10,6 +15,9 @@ assert(not git.get_state().initialized and vim.deep_equal(api.nvim_get_commands(
 assert(vim.deep_equal(api.nvim_get_autocmds({}), handlers))
 defaults.buffer.signs = true
 assert(git.get_config("buffer", "signs") == false, "A default snapshot must be detached")
+rejects(git.toggle, "buffer.signs must be boolean", "signs", "yes")
+assert(not git.get_state().signs)
+local buffers = require("git_tools.buffer")
 
 local opts = {
   buffer = { debounce = 75 },
@@ -39,7 +47,11 @@ assert(git.toggle("numhl") == false and git.get_config("buffer", "numhl") == fal
 assert(git.toggle("word_diff") and git.get_config("buffer", "word_diff") == true)
 assert(git.toggle("line_blame") and git.get_config("buffer", "line_blame") == true)
 local snapshot = git.get_config()
-assert(not pcall(git.setup, { buffer = { debounce = -1 } }))
+rejects(git.setup, "buffer.debounce must be a finite nonnegative number", { buffer = { debounce = -1 } })
+rejects(git.setup, "buffer.signs must be boolean", { buffer = { signs = "yes" } })
+rejects(git.toggle, "buffer.signs must be boolean", "signs", "yes")
+rejects(git.toggle, "Unknown buffer toggle: debounce", "debounce", true)
+assert(buffers.config.signs == true and buffers.config.debounce == 75)
 assert(vim.deep_equal(git.get_config(), snapshot), "Invalid setup must not publish a new snapshot")
 
 local echo, message = api.nvim_echo
@@ -63,6 +75,24 @@ vim.cmd("GitTools config")
 assert(message == vim.inspect(snapshot))
 api.nvim_echo = echo
 
+local buf = api.nvim_create_buf(false, true)
+buffers.states[buf] = { buf = buf, name = "", hunks = {}, index = {} }
+local observed
+api.nvim_create_autocmd("User", {
+  pattern = "GitToolsUpdate",
+  once = true,
+  callback = function()
+    observed = git.get_config("buffer", "signs")
+    git.toggle("signs", false)
+  end,
+})
+rejects(git.toggle, "buffer.signs must be boolean", "signs", 1)
+assert(observed == nil and buffers.config.signs == false)
+assert(git.toggle("signs", true) and observed == true)
+assert(buffers.config.signs == false and git.get_config("buffer", "signs") == false)
+buffers.detach(buf)
+api.nvim_buf_delete(buf, { force = true })
+
 git.setup({
   buffer = false,
   compare = { keymap = { panel = {} }, panel_keys = { close = "R", refresh = "R" } },
@@ -75,6 +105,8 @@ assert(vim.deep_equal(git.get_config("compare", "keymap", "panel"), {}))
 assert(#require("git_tools.compare_config").panel_keymap == 0)
 assert(#vim.fn.getcompletion("GitTools config buffer.", "cmdline", true) == 0)
 assert(git.toggle("signs", true) and git.get_config("buffer") == false)
+rejects(git.toggle, "buffer.signs must be boolean", "signs", "no")
+assert(buffers.config.signs == true and git.get_config("buffer") == false)
 
 git.setup()
 assert(git.get_config("buffer", "debounce") == 100 and git.get_config("compare", "keymap", "panel", "q") == "close")

@@ -75,24 +75,23 @@ function M.setup(opts)
   opts.compare = compare.normalize(opts.compare)
   opts.diff = opts.diff or nil
   opts.lazygit = opts.lazygit or nil
-  opts = config:resolve(opts)
-  local panel_keymap = compare.resolve(opts.compare)
-  local diff_options = window.resolve(opts.diff)
-  local terminal_options = lazygit.resolve(opts.lazygit)
-  local buffer_options = opts.buffer ~= false and buffers.resolve(opts.buffer) or nil
-  local commands = require("git_tools.commands")
-  local command = commands.resolve(M, opts.command)
-  compare.configure(panel_keymap)
-  window.configure(diff_options)
-  lazygit.configure(terminal_options)
-  if buffer_options then
-    buffers.setup(buffer_options)
-  else
-    buffers.dispose()
-  end
+  config:commit(config:resolve(opts), function(candidate)
+    local panel_keymap = compare.resolve(candidate.compare)
+    local diff_options = window.resolve(candidate.diff)
+    local terminal_options = lazygit.resolve(candidate.lazygit)
+    local commands = require("git_tools.commands")
+    local command = commands.resolve(M, candidate.command)
 
-  commands.setup(command)
-  config:commit(opts)
+    commands.setup(command)
+    compare.configure(panel_keymap)
+    window.configure(diff_options)
+    lazygit.configure(terminal_options)
+    if candidate.buffer == false then
+      buffers.dispose()
+    else
+      buffers.setup(candidate.buffer)
+    end
+  end)
   configured = true
 end
 
@@ -153,16 +152,8 @@ function M.toggle_overlay(buf)
   return require("git_tools.buffer").toggle_overlay(buf)
 end
 function M.toggle(name, value)
-  local buffers = require("git_tools.buffer")
-  local result = buffers.toggle(name, value)
-  local applied = buffers.config[name]
-  if configured and type(applied) == "boolean" then
-    local config = require("git_tools.config").instance()
-    if type(config:get("buffer", name)) == "boolean" then
-      config:change({ "buffer", name }, applied)
-    end
-  end
-  return result
+  local store = configured and require("git_tools.config").instance() or nil
+  return require("git_tools.buffer").toggle(name, value, store)
 end
 function M.get_hunks(buf)
   return require("git_tools.buffer").get_hunks(buf)

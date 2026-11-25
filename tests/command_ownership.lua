@@ -37,8 +37,9 @@ api.nvim_create_user_command("GitTools", function(args)
   calls = calls + 100
 end, { bang = true, nargs = "?" })
 local foreign = api.nvim_get_commands({}).GitTools
-local ok, err = pcall(git.setup, opts)
+local ok, err = pcall(git.setup, { buffer = { signs = true } })
 assert(not ok and tostring(err):find("Command already exists: GitTools", 1, true))
+assert(git.get_config("buffer") == false and vim.fn.exists("#GitToolsBuffer") == 0)
 git.dispose()
 assert(vim.deep_equal(api.nvim_get_commands({}).GitTools, foreign))
 vim.cmd("GitTools! two words")

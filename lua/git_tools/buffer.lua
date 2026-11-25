@@ -1,6 +1,7 @@
 local api, uv = vim.api, vim.uv
 local git, h = require("git_tools.git"), require("git_tools.hunks")
-local defaults = require("git_tools.config").defaults("buffer")
+local config = require("git_tools.config")
+local defaults = config.defaults("buffer")
 local M = { states = {}, config = vim.deepcopy(defaults) }
 local ns = api.nvim_create_namespace("GitToolsSigns")
 local overlay_ns = api.nvim_create_namespace("GitToolsOverlay")
@@ -427,15 +428,24 @@ function M.get_hunks(buf)
   return s and s.hunks or {}
 end
 
-function M.toggle(name, value)
+function M.toggle(name, value, store)
   if value == nil then
     value = not M.config[name]
   end
-  M.config[name] = value
+  config.validate_buffer_toggle(name, value)
+  if store and store:get("buffer", name) ~= nil then
+    store:change({ "buffer", name }, value, function(candidate)
+      M.config[name] = candidate.buffer[name]
+    end)
+  else
+    M.config[name] = value
+  end
+
+  -- Redrawing emits GitToolsUpdate, so observers see the published value.
   for _, s in pairs(M.states) do
     M.draw(s)
   end
-  if name == "line_blame" and not value then
+  if name == "line_blame" and not M.config[name] then
     for buf in pairs(M.states) do
       if api.nvim_buf_is_valid(buf) then
         api.nvim_buf_clear_namespace(buf, blame_ns, 0, -1)
@@ -494,14 +504,7 @@ end
 function M.resolve(opts)
   assert(opts == nil or type(opts) == "table", "buffer options must be a table")
   local candidate = vim.tbl_extend("force", vim.deepcopy(defaults), vim.deepcopy(opts or {}))
-  for _, name in ipairs({ "signs", "numhl", "word_diff", "line_blame" }) do
-    assert(type(candidate[name]) == "boolean", name .. " must be boolean")
-  end
-  assert(
-    type(candidate.debounce) == "number" and candidate.debounce >= 0 and candidate.debounce < math.huge,
-    "debounce must be nonnegative"
-  )
-  assert(candidate.on_attach == nil or type(candidate.on_attach) == "function", "on_attach must be a function")
+  config.validate_buffer(candidate)
   return candidate
 end
 

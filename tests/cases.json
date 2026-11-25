@@ -714,7 +714,7 @@
   "fixtures": {
     "base-tools.nvim": {
       "repository": "Jacky-Lzx/base-tools.nvim",
-      "revision": "ff06d239c5a50cb2b614bed2374d5a73e2cbb866",
+      "revision": "1ace8c28a46a672ac703d6adb1481ae3aa2a9baf",
       "path": "{root}/../base-tools.nvim"
     },
     "selection-tools.nvim": {

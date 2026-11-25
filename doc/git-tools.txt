@@ -54,7 +54,8 @@ git_tools.get_config(...)                              *git-tools-get-config*
     get_config("buffer", "signs"). Every read preserves false and returns
     nil for missing keys. Setup resolves legacy compare.panel_keys to
     compare.keymap.panel. When buffer features are configured, toggle()
-    updates their options in this snapshot after applying the change.
+    validates and applies the option, publishes the snapshot, and then
+    redraws affected buffers. Invalid values raise an error before applying.
 
     `:GitTools config` prints the full snapshot. Use an option path, e.g.
     `:GitTools config buffer.signs`, to inspect a single value. Option paths
@@ -128,6 +129,8 @@ git_tools.setup({buffer={...}})                             *git-tools-buffer*
         snapshot.
     nav_hunk("next"|"prev"|"first"|"last"), select_hunk(), preview_hunk(),
     toggle_overlay(buf), get_hunks(buf), toggle(name,optional_boolean).
+    toggle() accepts signs, numhl, word_diff and line_blame. Omit the value
+    to invert the option. An explicit value must be a boolean.
 
 git_tools.stage_hunk(opts) / unstage_hunk(opts) / reset_hunk(opts)
                                                              *git-tools-hunks*
