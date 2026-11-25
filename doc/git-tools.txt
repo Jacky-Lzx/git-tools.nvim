@@ -296,16 +296,16 @@ git_tools.lazygit(opts)                                    *git-tools-lazygit*
     LazyGit config. Theme/palette changes reload through terminal focus events
     without restarting the process (verified with LazyGit 0.66.2). Honors CLI
     config file lists/directories and LG_CONFIG_FILE. Repository-local config
-    keeps normal precedence. User config files are not edited; generated files
-    and theme subscriptions are cleaned up on close. theme=false opts out.
+    keeps normal precedence. Closing LazyGit cleans up the session overlay
+    and theme subscription. theme=false opts out.
     Without loaded theme-tools, launch behavior remains unchanged.
 
     On Unix, a session-local PATH wrapper recolors Delta diff backgrounds,
     emphasis, line numbers and headers. With a compatible bat, it builds a
-    syntax theme from Neovim highlight groups in a session-local cache.
-    If the cache is unavailable, it uses Catppuccin/Dracula when available,
-    then ANSI or no syntax highlighting. Renderer commands use the wrapper
-    when they resolve delta through PATH.
+    syntax theme from Neovim highlight groups in the background. Delta uses
+    Catppuccin/Dracula when available, then ANSI or no syntax highlighting
+    until the build succeeds. Matching caches are reused until Neovim exits.
+    Renderer commands use the wrapper when they resolve delta through PATH.
 
 diff.unified(before, after, opts)                          *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.

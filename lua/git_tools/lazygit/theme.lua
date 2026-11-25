@@ -14,6 +14,10 @@ local function builtin_syntax(c, available)
   return available[wanted] and wanted or available.ansi and "ansi" or "none"
 end
 
+local function warn(err)
+  vim.notify("LazyGit theme: " .. tostring(err), vim.log.levels.WARN, { title = "git-tools" })
+end
+
 local function config(c)
   local ui, p = c.ui, c.palette
   local theme = {
@@ -204,6 +208,10 @@ function M.prepare(opts)
     if self.unsubscribe then
       self.unsubscribe()
     end
+    if self.cancel_syntax then
+      self.cancel_syntax()
+      self.cancel_syntax = nil
+    end
     vim.fn.delete(self.root, "rf")
   end
 
@@ -219,10 +227,21 @@ function M.prepare(opts)
     local command = vim.fn.has("win32") == 0 and executable(path, opts.cwd, "delta")
     local bat = command and executable(path, opts.cwd, "bat")
 
-    local syntax_themes = {}
     if command then
-      syntax_themes = delta_syntax.list(command, opts)
       state.env.PATH = root .. ":" .. path
+    end
+
+    local available
+    local function publish(c, cache)
+      if command then
+        local syntax = delta_syntax.name
+        if not cache then
+          available = available or delta_syntax.list(command, opts)
+          syntax = builtin_syntax(c, available)
+        end
+        write(root .. "/delta", delta_script(command, c, syntax, cache), true)
+      end
+      write(state.path, { vim.json.encode(config(c)) })
     end
 
     function state:update(c)
@@ -232,31 +251,70 @@ function M.prepare(opts)
         return false
       end
 
-      local cache = self.syntax_cache
+      local key, cache = self.syntax_key, self.syntax_cache
       if syntax_changed then
-        cache = delta_syntax.build(bat, command, source, opts, root)
-      end
-      if command then
-        local syntax = cache and delta_syntax.name or builtin_syntax(c, syntax_themes)
-        write(root .. "/delta", delta_script(command, c, syntax, cache), true)
+        key = delta_syntax.key(bat, command, source, opts)
+        cache = delta_syntax.cached(key)
       end
 
-      write(self.path, { vim.json.encode(config(c)) })
+      publish(c, cache)
       self.colors = vim.deepcopy(c)
-      self.syntax_source, self.syntax_cache = source, cache
+      self.syntax_source, self.syntax_key, self.syntax_cache = source, key, cache
 
-      return true
+      return true, syntax_changed
     end
 
     function state:attach(session)
-      if type(themes.on_change) == "function" then
-        self.unsubscribe = themes.on_change("git-tools.lazygit." .. session.buf, function(c)
-          if not session.closed and not session.exited and self:update(c) then
-            -- LazyGit reloads changed config on terminal focus-in. This updates
-            -- its existing process and panel state, without restarting a job.
-            vim.fn.chansend(session.job, "\27[O\27[I")
+      local function focus()
+        -- LazyGit reloads changed config on terminal focus-in.
+        pcall(vim.fn.chansend, session.job, "\27[O\27[I")
+      end
+
+      local function request_syntax()
+        if self.cancel_syntax then
+          self.cancel_syntax()
+          self.cancel_syntax = nil
+        end
+        local key = self.syntax_key
+        if not key or self.syntax_cache then
+          return
+        end
+
+        self.cancel_syntax = delta_syntax.request(key, bat, command, self.syntax_source, opts, function(cache)
+          if session.closed or session.exited or self.syntax_key ~= key then
+            return
+          end
+          self.cancel_syntax = nil
+          if not cache then
+            return
+          end
+
+          local applied, err = pcall(publish, self.colors, cache)
+          if applied then
+            self.syntax_cache = cache
+            focus()
+          else
+            warn(err)
           end
         end)
+      end
+
+      if type(themes.on_change) == "function" then
+        self.unsubscribe = themes.on_change("git-tools.lazygit." .. session.buf, function(c)
+          if session.closed or session.exited then
+            return
+          end
+          local changed, syntax_changed = self:update(c)
+          if changed then
+            focus()
+          end
+          if syntax_changed then
+            request_syntax()
+          end
+        end)
+      end
+      if not self.cancel_syntax then
+        request_syntax()
       end
     end
 
@@ -265,7 +323,7 @@ function M.prepare(opts)
 
   if not ok then
     state:close()
-    vim.notify("LazyGit theme: " .. tostring(err), vim.log.levels.WARN, { title = "git-tools" })
+    warn(err)
 
     return
   end

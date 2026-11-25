@@ -103,10 +103,20 @@ assert(vim.deep_equal(vim.fn.readfile(base), original))
 
 -- An optional bat that fails to build a cache must still allow the original Delta theme.
 local bat = dir .. "/bat"
-vim.fn.writefile({ "#!/bin/sh", "exit 1" }, bat)
+vim.fn.writefile({
+  "#!/bin/sh",
+  'if [ "$1" = cache ]; then printf "failed\\n" > "$RECORD.bat"; fi',
+  "exit 1",
+}, bat)
 assert(uv.fs_chmod(bat, 493))
-local fallback = assert(adapter.prepare(opts))
-assert(not fallback.syntax_cache and vim.tbl_contains(delta(fallback), "--syntax-theme=Dracula"))
+local fallback = assert(tools.lazygit(opts))
+assert(
+  vim.wait(5000, function()
+    return vim.fn.filereadable(record .. ".bat") == 1 and not fallback.theme.cancel_syntax
+  end, 5),
+  "The background build must run and finish"
+)
+assert(not fallback.theme.syntax_cache and vim.tbl_contains(delta(fallback.theme), "--syntax-theme=Dracula"))
 fallback:close()
 vim.fn.delete(bat)
 

@@ -164,17 +164,17 @@ palette overrides update the running session through LazyGit's terminal focus
 reload, preserving the process and panel state (verified with LazyGit 0.66.2).
 CLI `--use-config-file`/`-ucf`, `LG_CONFIG_FILE`, and custom config directories are
 honored; repository-local LazyGit configuration retains its normal precedence.
-The generated overlay also covers dark/light theme overrides. No user config
-file is edited, and temporary files/subscriptions are removed on close.
+The generated overlay also covers dark/light theme overrides. Closing LazyGit
+removes the session overlay and theme subscription.
 
 On Unix, a session-local `delta` wrapper synchronizes diff backgrounds, word
 emphasis, line numbers and headers while retaining other renderer arguments.
-With a compatible `bat`, it generates a syntax theme from the active Neovim
-highlight groups and builds it in a session-local cache. Delta's language
-grammars determine which spans receive those colors. If the cache cannot be
-built or loaded, the wrapper uses the available Catppuccin/Dracula theme, ANSI,
-or no syntax highlighting. The wrapper applies to renderer commands that
-resolve `delta` through `PATH`.
+With a compatible `bat`, a background job builds a syntax theme from the active
+Neovim highlight groups. Delta uses the available Catppuccin/Dracula theme,
+ANSI, or no syntax highlighting until the build succeeds. Matching builds are
+reused across LazyGit sessions until Neovim exits. Delta's language grammars
+determine which spans receive those colors. The wrapper applies to renderer
+commands that resolve `delta` through `PATH`.
 Explicit delta color arguments are replaced by the current theme's colors.
 Use `theme=false` per call or `setup({ lazygit = { theme = false } })` to keep
 LazyGit/delta's own colors. Without loaded theme-tools, launch behavior is
