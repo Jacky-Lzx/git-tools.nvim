@@ -1,8 +1,7 @@
 -- Own the floating terminal, session theme and job; LazyGit owns the Git interface.
 local api = vim.api
 local M = {}
-local initial = require("git_tools.config").defaults("lazygit")
-local defaults = vim.deepcopy(initial)
+local config = require("git_tools.config").section_instance("lazygit")
 
 local function dimension(value, available)
   assert(
@@ -37,7 +36,7 @@ end
 
 function M.resolve(opts)
   assert(opts == nil or type(opts) == "table", "lazygit options must be a table")
-  local candidate = vim.tbl_extend("force", vim.deepcopy(initial), vim.deepcopy(opts or {}))
+  local candidate = vim.tbl_extend("force", config:resolve().lazygit, vim.deepcopy(opts or {}))
   assert(type(candidate.command) == "string", "LazyGit command must be a string")
   assert(type(candidate.args) == "table" and vim.islist(candidate.args), "LazyGit args must be a list")
   for _, arg in ipairs(candidate.args) do
@@ -49,7 +48,7 @@ function M.resolve(opts)
 end
 
 function M.configure(opts)
-  defaults = M.resolve(opts)
+  config:change({ "lazygit" }, M.resolve(opts))
 end
 
 function M.dispose()
@@ -60,7 +59,7 @@ function M.dispose()
       and vim.bo[session.buf].modified
     session:close(false, keep)
   end
-  defaults = vim.deepcopy(initial)
+  config:reset()
 end
 
 function M.open(opts)
@@ -75,7 +74,7 @@ function M.open(opts)
     end
     session:close()
   end
-  opts = vim.tbl_extend("force", {}, defaults, opts or {})
+  opts = vim.tbl_extend("force", config:get("lazygit"), opts or {})
   assert(type(opts.command) == "string", "LazyGit command must be an executable name or path")
   assert(type(opts.args) == "table" and vim.islist(opts.args), "LazyGit args must be a list")
   for _, arg in ipairs(opts.args) do

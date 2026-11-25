@@ -15,6 +15,26 @@ assert(not git.get_state().initialized and vim.deep_equal(api.nvim_get_commands(
 assert(vim.deep_equal(api.nvim_get_autocmds({}), handlers))
 defaults.buffer.signs = true
 assert(git.get_config("buffer", "signs") == false, "A default snapshot must be detached")
+
+local base_config = require("base_tools.config")
+local new_config, definitions = base_config.new, {}
+base_config.new = function(definition)
+  definitions[#definitions + 1] = vim.tbl_keys(definition)
+  return new_config(definition)
+end
+local window = require("git_tools.diff.window")
+local lazygit = require("git_tools.lazygit")
+base_config.new = new_config
+assert(vim.deep_equal(definitions, { { "diff" }, { "lazygit" } }))
+assert(window.options().wrap == false and lazygit.resolve().width == 0.9)
+window.configure({ wrap = true })
+assert(window.options().wrap and not window.options({ wrap = false }).wrap)
+assert(git.get_config("diff", "wrap") == false)
+rejects(window.configure, "diff.wrap must be boolean", { wrap = "yes" })
+assert(window.options().wrap)
+window.configure()
+assert(window.options().wrap == false)
+
 rejects(git.toggle, "buffer.signs must be boolean", "signs", "yes")
 assert(not git.get_state().signs)
 local buffers = require("git_tools.buffer")
@@ -31,7 +51,7 @@ git.setup(opts)
 assert(vim.deep_equal(opts, original), "Setup must retain the caller's legacy options")
 assert(git.get_config("buffer", "numhl") == true and git.get_config("buffer", "debounce") == 75)
 assert(git.get_config("buffer", "on_attach") == on_attach)
-assert(git.get_config("diff", "wrap") == true)
+assert(git.get_config("diff", "wrap") == true and window.options().wrap == true)
 assert(git.get_config("lazygit", "width") == 0.9 and git.get_config("lazygit", "args", 1) == "--example")
 assert(git.get_config("compare", "panel_keys") == nil)
 assert(vim.deep_equal(git.get_config("compare", "keymap", "panel"), {
@@ -125,6 +145,6 @@ assert(git.get_config("buffer", "signs") == false and git.get_config("buffer", "
 git.setup({ diff = { wrap = true } })
 git.toggle("signs", true)
 git.dispose()
-assert(git.get_config("diff", "wrap") == false and not git.get_state().initialized)
+assert(git.get_config("diff", "wrap") == false and window.options().wrap == false and not git.get_state().initialized)
 assert(git.get_config("buffer", "signs") == false)
 print("GitTools configuration: cold defaults, legacy aliases, snapshots, runtime state and command inspection passed")

@@ -455,7 +455,7 @@
         "{nvim}",
         "--headless",
         "-u",
-        "NONE",
+        "tests/minimal_init.lua",
         "-n",
         "-i",
         "NONE",

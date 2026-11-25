@@ -2,11 +2,6 @@ local M = {}
 
 local instance
 
-local standalone_defaults = {
-  diff = { wrap = false },
-  lazygit = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded", theme = true },
-}
-
 local definition
 
 local function configuration()
@@ -14,8 +9,10 @@ local function configuration()
     local validators = require("base_tools.config.validators")
     local boolean = validators.type("boolean")
     definition = {
-      diff = { default = standalone_defaults.diff },
-      lazygit = { default = standalone_defaults.lazygit },
+      diff = { fields = { wrap = { default = false, validate = boolean } } },
+      lazygit = {
+        default = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded", theme = true },
+      },
       buffer = {
         default_choice = "enabled",
         choices = {
@@ -50,17 +47,18 @@ local function configuration()
   return definition
 end
 
+function M.section_instance(name)
+  local entry = assert(configuration()[name], "Unknown config section: " .. name)
+  return require("base_tools.config").new({ [name] = entry })
+end
+
 function M.buffer_instance(opts)
-  local store = require("base_tools.config").new({ buffer = configuration().buffer })
+  local store = M.section_instance("buffer")
   store:change({ "buffer" }, opts)
   return store
 end
 
 function M.defaults(...)
-  local section = ...
-  if standalone_defaults[section] ~= nil then
-    return vim.deepcopy(vim.tbl_get(standalone_defaults, ...))
-  end
   local defaults = M.instance():resolve()
   if select("#", ...) == 0 then
     return defaults
