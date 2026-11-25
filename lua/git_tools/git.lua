@@ -1,5 +1,10 @@
 -- Git I/O is separate from the dependency-free text diff core.
 local M = {}
+local env = { GIT_TERMINAL_PROMPT = "0", GIT_LITERAL_PATHSPECS = "1", GIT_OPTIONAL_LOCKS = "0", LC_ALL = "C" }
+
+local function command(args)
+  return vim.list_extend({ "git", "--no-pager", "-c", "core.quotepath=false" }, args)
+end
 
 function M.task()
   return require("base_tools.process").new()
@@ -7,14 +12,12 @@ end
 
 function M.run(task, cwd, args, callback, opts)
   opts = opts or {}
-  local argv = { "git", "--no-pager", "-c", "core.quotepath=false" }
-  vim.list_extend(argv, args)
 
-  task:run(argv, {
+  task:run(command(args), {
     cwd = cwd,
     stdin = opts.stdin,
     timeout = opts.timeout or 10000,
-    env = { GIT_TERMINAL_PROMPT = "0", GIT_LITERAL_PATHSPECS = "1", GIT_OPTIONAL_LOCKS = "0", LC_ALL = "C" },
+    env = env,
   }, function(output, launch_error)
     if launch_error then
       callback(launch_error, "", -1)
@@ -30,7 +33,19 @@ function M.run(task, cwd, args, callback, opts)
   end)
 end
 
-function M.discover(task, opts, callback)
+-- Native command completion is synchronous. Limit waits and let callers use a fallback.
+function M.read(cwd, args, timeout)
+  local ok, process = pcall(vim.system, command(args), { cwd = cwd, env = env })
+  if ok then
+    local result = process:wait(timeout)
+    if result.code == 0 then
+      return result.stdout or ""
+    end
+    return nil, result.code
+  end
+end
+
+function M.directory(opts)
   opts = opts or {}
   local path = opts.cwd
   if not path then
@@ -44,8 +59,11 @@ function M.discover(task, opts, callback)
   if vim.fn.isdirectory(path) ~= 1 then
     path = vim.fs.dirname(path)
   end
+  return path
+end
 
-  M.run(task, path, { "rev-parse", "--show-toplevel" }, function(err, root)
+function M.discover(task, opts, callback)
+  M.run(task, M.directory(opts), { "rev-parse", "--show-toplevel" }, function(err, root)
     if err then
       callback(err)
       return

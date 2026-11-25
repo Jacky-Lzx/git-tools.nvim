@@ -45,6 +45,25 @@
       "timeout": 120
     },
     {
+      "name": "revision_completion",
+      "suite": "unit",
+      "command": [
+        "{nvim}",
+        "--headless",
+        "-u",
+        "tests/minimal_init.lua",
+        "-i",
+        "NONE",
+        "--noplugin",
+        "-l",
+        "tests/revision_completion.lua"
+      ],
+      "files": [
+        "tests/revision_completion.lua"
+      ],
+      "timeout": 90
+    },
+    {
       "name": "setup_contract",
       "suite": "unit",
       "command": [

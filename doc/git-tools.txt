@@ -229,8 +229,12 @@ git_tools.merge(opts)                                        *git-tools-merge*
         reset and
     *_buffer variants. compare accepts from/to; log accepts a revision.
     Without a revision, :GitTools compare uses HEAD~1 as its baseline.
-    Completion suggests actions first, then HEAD and HEAD~1 in revision
-    positions for compare and log.
+    Completion suggests actions first. Revision positions for compare and
+    log offer HEAD, HEAD~1, local branches, remote-tracking branches and
+    tags. Refs come from the current file's repository or the working
+    directory for unnamed and special buffers. A short-lived cache keeps
+    repeated matching local to Neovim. Slow ref lookups continue in the
+    background so later completion requests can use their results.
     Ex ranges select lines for blame/history/browse/hunk operations.
 
 git_tools.branches(opts)                                  *git-tools-branches*

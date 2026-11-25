@@ -25,7 +25,6 @@ local command_actions = {
 local command_aliases = { stage = "stage_hunk", unstage = "unstage_hunk", reset = "reset_hunk" }
 local revision_arguments = { compare = 2, log = 1 }
 local default_compare_revision = "HEAD~1"
-local revision_candidates = { "HEAD", default_compare_revision }
 
 local function complete_command(lead, line, cursor)
   local before = line:sub(1, cursor - #lead)
@@ -43,7 +42,7 @@ local function complete_command(lead, line, cursor)
   if #args == 0 then
     candidates = command_actions
   elseif #args <= (revision_arguments[args[1]] or 0) then
-    candidates = revision_candidates
+    candidates = vim.list_extend({ "HEAD", default_compare_revision }, require("git_tools.revisions").list())
   else
     return {}
   end
@@ -172,7 +171,7 @@ end
 
 function M.dispose()
   configured = false
-  for _, name in ipairs({ "buffer", "view", "lazygit" }) do
+  for _, name in ipairs({ "buffer", "view", "lazygit", "revisions" }) do
     local module = package.loaded["git_tools." .. name]
     if module then
       module.dispose()
