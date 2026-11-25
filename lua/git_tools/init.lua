@@ -3,7 +3,7 @@ local M = { diff = require("git_tools.diff") }
 local configured = false
 
 function M.get_config(...)
-  return require("git_tools.config").get(...)
+  return require("git_tools.config").instance():get(...)
 end
 
 -- Snapshot only already-loaded providers; never start Git or create a view.
@@ -68,14 +68,14 @@ end
 function M.setup(opts)
   assert(opts == nil or type(opts) == "table", "git-tools.nvim: setup expects a table")
   opts = vim.tbl_extend("force", {}, opts or {})
-  local config = require("git_tools.config")
+  local config = require("git_tools.config").instance()
   local window, lazygit = require("git_tools.diff.window"), require("git_tools.lazygit")
   local compare = require("git_tools.compare_config")
   local buffers = require("git_tools.buffer")
   opts.compare = compare.normalize(opts.compare)
   opts.diff = opts.diff or nil
   opts.lazygit = opts.lazygit or nil
-  opts = config.resolve(opts)
+  opts = config:resolve(opts)
   local panel_keymap = compare.resolve(opts.compare)
   local diff_options = window.resolve(opts.diff)
   local terminal_options = lazygit.resolve(opts.lazygit)
@@ -92,7 +92,7 @@ function M.setup(opts)
   end
 
   commands.setup(command)
-  config.publish(opts)
+  config:commit(opts)
   configured = true
 end
 
@@ -118,7 +118,7 @@ function M.dispose()
   end
   local config = package.loaded["git_tools.config"]
   if config then
-    config.publish()
+    config.reset()
   end
 end
 
@@ -153,7 +153,16 @@ function M.toggle_overlay(buf)
   return require("git_tools.buffer").toggle_overlay(buf)
 end
 function M.toggle(name, value)
-  return require("git_tools.buffer").toggle(name, value)
+  local buffers = require("git_tools.buffer")
+  local result = buffers.toggle(name, value)
+  local applied = buffers.config[name]
+  if configured and type(applied) == "boolean" then
+    local config = require("git_tools.config").instance()
+    if type(config:get("buffer", name)) == "boolean" then
+      config:change({ "buffer", name }, applied)
+    end
+  end
+  return result
 end
 function M.get_hunks(buf)
   return require("git_tools.buffer").get_hunks(buf)

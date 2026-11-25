@@ -10,23 +10,24 @@ local defaults = {
   command = { default = "menu" },
 }
 local rules = { replace = { { "compare", "keymap", "panel" } } }
-local effective = defaults
+local instance
 
 function M.defaults(...)
   -- Direct feature calls can use the built-in defaults before setup().
   return vim.deepcopy(vim.tbl_get(defaults, ...))
 end
 
-function M.resolve(opts)
-  return require("base_tools.config").merge(defaults, opts, rules)
+function M.instance()
+  if not instance then
+    instance = require("base_tools.config").new(defaults, rules)
+  end
+  return instance
 end
 
-function M.get(...)
-  return require("base_tools.config").get(effective, ...)
-end
-
-function M.publish(opts)
-  effective = opts and vim.deepcopy(opts) or defaults
+function M.reset()
+  if instance then
+    instance:reset()
+  end
 end
 
 return M

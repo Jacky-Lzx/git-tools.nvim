@@ -49,12 +49,12 @@ example, not a dump of defaults. Detailed configuration and examples follow
 below.
 
 git_tools.get_config(...)                              *git-tools-get-config*
-    Get a copy of the options from the last successful setup(), or the
-    defaults before setup() and after dispose(). Pass keys separately to
-    read a nested value, e.g. get_config("buffer", "signs"). Every read
-    preserves false and returns nil for missing keys. Setup resolves legacy
-    compare.panel_keys to compare.keymap.panel. Runtime toggles are reported
-    by |git-tools-reference-read-only-state|.
+    Get a copy of the current configuration, or the defaults before setup()
+    and after dispose(). Pass keys separately to read a nested value, e.g.
+    get_config("buffer", "signs"). Every read preserves false and returns
+    nil for missing keys. Setup resolves legacy compare.panel_keys to
+    compare.keymap.panel. When buffer features are configured, toggle()
+    updates their options in this snapshot after applying the change.
 
     `:GitTools config` prints the full snapshot. Use an option path, e.g.
     `:GitTools config buffer.signs`, to inspect a single value. Option paths
