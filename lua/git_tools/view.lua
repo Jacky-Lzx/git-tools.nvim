@@ -31,6 +31,7 @@ local function bar(text)
 end
 
 local panel_key_labels = { ["<CR>"] = "Enter", ["<Tab>"] = "Tab" }
+
 local function panel_key_hint(lhs, label)
   return (panel_key_labels[lhs] or vim.fn.strtrans(lhs)) .. ": " .. vim.fn.strtrans(label)
 end
@@ -233,19 +234,23 @@ function View:close()
   self:cleanup()
   return true
 end
+
 function View:decorate_panel()
   if not self:alive() or not api.nvim_buf_is_loaded(self.panel) then
     return
   end
+
   local icons = package.loaded["theme_tools.icons"]
   local get_icon = type(icons) == "table" and icons.get
   api.nvim_buf_clear_namespace(self.panel, panel_rows_ns, 0, -1)
+
   for index, node in ipairs(self.panel_rows or {}) do
     local row = index - 1
     api.nvim_buf_set_extmark(self.panel, panel_rows_ns, row, node.highlight_start, {
       end_col = node.highlight_end,
       hl_group = node.highlight,
     })
+
     if type(get_icon) == "function" then
       local icon, hl = get_icon(node.children and "directory" or "file", node.path)
       if icon and icon ~= "" then
@@ -395,6 +400,7 @@ end
 function View:layout(merge)
   if not self.tab then
     vim.cmd("tabnew")
+
     self.tab, self.panel = api.nvim_get_current_tabpage(), api.nvim_get_current_buf()
     self.panel_win = api.nvim_get_current_win()
 
@@ -424,6 +430,7 @@ function View:layout(merge)
     require("git_tools.diff.theme").compare_panel(self.panel_win)
 
     self.group = api.nvim_create_augroup("GitToolsView" .. self.panel, { clear = true })
+
     api.nvim_create_autocmd("User", {
       group = self.group,
       pattern = { "ThemeToolsReady", "ThemeToolsIconsChanged" },

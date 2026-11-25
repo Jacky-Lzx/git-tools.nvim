@@ -29,9 +29,11 @@ local function apply(c)
     Hunk = { fg = c.ui.accent, bold = true },
     Meta = { fg = c.ui.muted },
   }
+
   for name, value in pairs(groups) do
     api.nvim_set_hl(0, "GitToolsDiff" .. name, value)
   end
+
   local sidebar = c.ui.sidebar_bg
   for name, value in pairs({
     Normal = { fg = c.ui.fg, bg = sidebar },
@@ -50,6 +52,7 @@ end
 local function fallback()
   local normal_bg = highlight_color("Normal", "bg")
   local light = vim.o.background == "light"
+
   apply({
     palette = { bg = normal_bg or (light and "#ffffff" or "#14161b") },
     ui = {
@@ -81,9 +84,12 @@ function M.setup()
   if initialized then
     return
   end
+
   initialized = true
   fallback()
+
   local group = api.nvim_create_augroup("GitToolsDiffTheme", { clear = true })
+
   api.nvim_create_autocmd("User", { group = group, pattern = "ThemeToolsReady", callback = attach })
   api.nvim_create_autocmd("ColorScheme", {
     group = group,
@@ -92,11 +98,13 @@ function M.setup()
       attach()
     end,
   })
+
   attach()
 end
 
 local function window_highlights(win, mappings)
   M.setup()
+
   api.nvim_win_call(win, function()
     -- Keep the mappings when the comparison pane switches buffers.
     vim.opt.winhighlight:append(mappings)
