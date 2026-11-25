@@ -710,7 +710,7 @@
     "tests/run.sh": "Stable shell entry point for tests/run.py"
   },
   "manual": {
-    "tests/lazygit_theme_tui.lua": "Interactive real LazyGit/delta acceptance; requires theme-tools and an actual terminal"
+    "tests/lazygit_theme_tui.lua": "Interactive real LazyGit/Delta/bat acceptance; requires theme-tools and an actual terminal"
   },
   "fixtures": {
     "base-tools.nvim": {

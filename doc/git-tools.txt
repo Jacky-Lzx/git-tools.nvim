@@ -300,14 +300,12 @@ git_tools.lazygit(opts)                                    *git-tools-lazygit*
     and theme subscriptions are cleaned up on close. theme=false opts out.
     Without loaded theme-tools, launch behavior remains unchanged.
 
-    On Unix, a session-local PATH wrapper recolors delta's backgrounds,
-        emphasis,
-    line numbers and headers, replacing explicit color arguments but
-        preserving
-    other renderer options. Uses installed Catppuccin/Dracula syntax themes,
-        then
-    ANSI/none fallbacks. Absolute delta paths and other renderers are
-        unchanged.
+    On Unix, a session-local PATH wrapper recolors Delta diff backgrounds,
+    emphasis, line numbers and headers. With a compatible bat, it builds a
+    syntax theme from Neovim highlight groups in a session-local cache.
+    If the cache is unavailable, it uses Catppuccin/Dracula when available,
+    then ANSI or no syntax highlighting. Renderer commands use the wrapper
+    when they resolve delta through PATH.
 
 diff.unified(before, after, opts)                          *git-tools-unified*
     Return unified diff lines with labels, or {} for identical inputs.

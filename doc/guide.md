@@ -169,9 +169,12 @@ file is edited, and temporary files/subscriptions are removed on close.
 
 On Unix, a session-local `delta` wrapper synchronizes diff backgrounds, word
 emphasis, line numbers and headers while retaining other renderer arguments.
-It uses the installed Catppuccin/Dracula syntax theme when available, with ANSI/none
-fallbacks for other themes. It applies to renderer commands that resolve `delta`
-through `PATH`; absolute delta paths and other renderers are left alone.
+With a compatible `bat`, it generates a syntax theme from the active Neovim
+highlight groups and builds it in a session-local cache. Delta's language
+grammars determine which spans receive those colors. If the cache cannot be
+built or loaded, the wrapper uses the available Catppuccin/Dracula theme, ANSI,
+or no syntax highlighting. The wrapper applies to renderer commands that
+resolve `delta` through `PATH`.
 Explicit delta color arguments are replaced by the current theme's colors.
 Use `theme=false` per call or `setup({ lazygit = { theme = false } })` to keep
 LazyGit/delta's own colors. Without loaded theme-tools, launch behavior is
@@ -462,11 +465,10 @@ Set `GIT_TOOLS_CONFIG=/path/to/nvim` to exercise its git-tools keymap spec too.
 When LazyGit is installed, this TUI check also opens its real interface using an
 isolated configuration directory and verifies resize, close/reopen and quit.
 That part needs normal terminal access (`/dev/tty`).
-`tests/lazygit_theme_tui.lua` additionally checks real RGB output from LazyGit
-and delta while switching Mocha/Dracula, a light theme and semantic overrides,
-without replacing the running process or changing source/config files. It also
-needs `/dev/tty` and skips when the external tools or sibling theme-tools are
-unavailable.
+`tests/lazygit_theme_tui.lua` checks real RGB output from LazyGit and Delta
+with token-only highlight changes, theme switches and semantic overrides
+in the same running session. It needs `/dev/tty`, LazyGit, Delta, bat and
+sibling theme-tools.
 
 MIT licensed. The renderer originated in selection-tools.nvim; its MIT copyright
 notice is retained in [LICENSE](../LICENSE).

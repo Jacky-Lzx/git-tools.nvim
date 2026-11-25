@@ -1,10 +1,15 @@
--- Optional end-to-end check against real LazyGit/delta in Neovim's PTY.
+-- Optional end-to-end check against real LazyGit/Delta/bat in Neovim's PTY.
 local root = vim.env.GIT_TOOLS_ROOT or vim.fn.getcwd()
 vim.opt.rtp:prepend(root)
 dofile(root .. "/tests/minimal_init.lua")
 local theme_root = vim.fs.dirname(root) .. "/theme-tools.nvim"
-if vim.fn.isdirectory(theme_root) == 0 or vim.fn.executable("lazygit") ~= 1 or vim.fn.executable("delta") ~= 1 then
-  print("SKIP real LazyGit theme PTY (requires LazyGit, delta and sibling theme-tools)")
+if
+  vim.fn.isdirectory(theme_root) == 0
+  or vim.fn.executable("lazygit") ~= 1
+  or vim.fn.executable("delta") ~= 1
+  or vim.fn.executable("bat") ~= 1
+then
+  print("SKIP real LazyGit theme PTY (requires LazyGit, Delta, bat and sibling theme-tools)")
   vim.cmd("qa!")
   return
 end
@@ -12,10 +17,10 @@ vim.opt.rtp:prepend(theme_root)
 package.path = root .. "/tests/?.lua;" .. package.path
 local f = require("helpers").fixture()
 local themes, api = require("theme_tools"), vim.api
-f:write("sample.lua", { "local answer = 12", "return answer" })
+f:write("sample.lua", { 'local answer = "previous"', "return answer" })
 f:git("add", "sample.lua")
 f:git("commit", "-qm", "Initial")
-f:write("sample.lua", { "local answer = 34", "return answer" })
+f:write("sample.lua", { 'local answer = "updated"', "return answer" })
 vim.fn.mkdir(f.root .. "/config", "p")
 local base = f.root .. "/base.yml"
 vim.fn.writefile({
@@ -46,6 +51,7 @@ local session = assert(require("git_tools").lazygit({
   env = {
     CONFIG_DIR = f.root .. "/config",
     LG_CONFIG_FILE = base,
+    BAT_CONFIG_DIR = f.root .. "/bat-config",
     TERM = "xterm-256color",
     COLORTERM = "truecolor",
     NO_COLOR = "",
@@ -70,6 +76,7 @@ wait(function()
   return output:find("sample.lua", 1, true)
 end, "LazyGit must render the repository")
 local mocha = themes.palette()
+assert(session.theme.syntax_cache, "Delta must load the generated syntax theme")
 wait(function()
   return output:find(rgb(mocha.ui.accent), 1, true)
 end, "Initial UI must use Mocha's accent")
@@ -79,16 +86,36 @@ wait(function()
 end, "Real delta must render the file diff")
 assert(output:find(rgb(mocha.git.add), 1, true), "Delta line numbers must use the semantic add color")
 local job, buf = session.job, session.buf
+local initial_cache = session.theme.syntax_cache
+output = ""
+api.nvim_set_hl(0, "GitToolsTestString", { fg = "#01a2b3", italic = true })
+api.nvim_set_hl(0, "@string", { link = "GitToolsTestString" })
+api.nvim_set_hl(0, "@keyword", { fg = "#04c5d6" })
+themes.refresh_palette()
+assert(vim.deep_equal(mocha, themes.palette()), "The token-only change must leave the semantic palette equal")
+wait(function()
+  return output:find(rgb("#01a2b3"), 1, true) and output:find(rgb("#04c5d6"), 1, true)
+end, "Delta must render mapped colors from a token-only change and follow highlight links")
+local updated_cache = assert(session.theme.syntax_cache)
+assert(updated_cache ~= initial_cache)
+themes.refresh_palette()
+assert(session.theme.syntax_cache == updated_cache, "Repeated publishes must reuse the same cache")
+
 output = ""
 vim.cmd.colorscheme("theme-tools-dracula")
 themes.refresh_palette()
 local dracula = themes.palette()
+local dracula_string = string.format("#%06x", api.nvim_get_hl(0, { name = "@string", link = false }).fg)
 wait(function()
   return output:find(rgb(dracula.ui.accent), 1, true)
 end, "Existing LazyGit must reload Dracula's UI colors on focus-in")
 wait(function()
   return output:find(rgb(dracula.git.add), 1, true)
 end, "Existing delta preview must reload Dracula's add color")
+wait(function()
+  return output:find(rgb(dracula_string), 1, true)
+end, "Existing Delta preview must reload the generated Dracula string color")
+assert(session.theme.syntax_cache and session.theme.syntax_cache ~= updated_cache)
 assert(session.job == job and session.buf == buf, "Switching themes must preserve the session")
 -- Exercise another live refresh with custom semantics, rather than theme names.
 output = ""
@@ -109,6 +136,7 @@ local light = themes.palette()
 wait(function()
   return output:find(rgb(light.ui.accent), 1, true) and output:find(rgb(light.git.add), 1, true)
 end, "Live light theme fallback must reach LazyGit and delta")
+assert(session.theme.syntax_cache, "Light themes must use a generated syntax theme too")
 assert(session.job == job and session.buf == buf)
 local theme_dir = session.theme.root
 session:close()
@@ -129,5 +157,5 @@ if vim.env.GIT_TOOLS_THEME_TUI_RESULT then
   }, vim.env.GIT_TOOLS_THEME_TUI_RESULT)
 end
 f:cleanup()
-print("Real LazyGit/delta PTY: Mocha, live Dracula/light/overrides, same job/buffer, source/config preservation passed")
+print("Real LazyGit/Delta PTY: live token colors, Dracula/light/overrides, same job/buffer and cleanup passed")
 vim.cmd("qa!")

@@ -30,7 +30,7 @@ vim.fn.writefile({
   'printf "%s\\n" "$@"',
 }, dir .. "/delta")
 assert(uv.fs_chmod(dir .. "/delta", 493))
-local env = { LG_CONFIG_FILE = base, CONFIG_DIR = dir, RECORD = record, PATH = dir .. ":" .. vim.env.PATH }
+local env = { LG_CONFIG_FILE = base, CONFIG_DIR = dir, RECORD = record, PATH = dir }
 local opts = { command = command, args = {}, env = env, cwd = dir }
 vim.cmd.colorscheme("theme-tools-mocha")
 themes.refresh_palette()
@@ -100,6 +100,15 @@ assert(vim.fn.isdirectory(theme_dir) == 0, "Closing must remove scripts/config a
 themes.refresh_palette()
 assert(vim.fn.isdirectory(theme_dir) == 0)
 assert(vim.deep_equal(vim.fn.readfile(base), original))
+
+-- An optional bat that fails to build a cache must still allow the original Delta theme.
+local bat = dir .. "/bat"
+vim.fn.writefile({ "#!/bin/sh", "exit 1" }, bat)
+assert(uv.fs_chmod(bat, 493))
+local fallback = assert(adapter.prepare(opts))
+assert(not fallback.syntax_cache and vim.tbl_contains(delta(fallback), "--syntax-theme=Dracula"))
+fallback:close()
+vim.fn.delete(bat)
 
 local disabled = assert(tools.lazygit(vim.tbl_extend("force", opts, { theme = false })))
 assert(not disabled.theme, "Per-call opt-out must keep the original launch path")
