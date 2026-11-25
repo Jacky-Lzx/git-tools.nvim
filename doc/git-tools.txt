@@ -162,6 +162,12 @@ git_tools.compare(opts) / toggle_compare(opts)             *git-tools-compare*
         closes.
     Revision/index snapshots are read-only. History picker C-d opens a commit.
 
+    `git_tools.close_compares()` closes all GitTools comparison tabs and
+    returns true. It keeps focus in the original editing tab when possible.
+    Returns nil and an error message if an editing tab is unavailable or a
+    comparison tab cannot be closed safely. Use it before taking an editor
+    session snapshot that should omit comparisons.
+
 Compare panel keymap                                  *git-tools-compare-keymap*
 
     `compare.keymap.panel` replaces the default normal-mode Files mappings

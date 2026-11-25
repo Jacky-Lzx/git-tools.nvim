@@ -415,6 +415,42 @@ wait(function()
 end)
 assert(panel_mapping("R").buffer == 1 and panel_mapping("q").buffer == 1, "Disposing must reset panel shortcuts")
 view:close()
+
+vim.cmd.tabnew()
+local origin = api.nvim_get_current_tabpage()
+local editor_win = api.nvim_get_current_win()
+vim.wo[editor_win].signcolumn = "yes:2"
+local first = tools.compare({ cwd = fixture.root, from = "HEAD", to = "HEAD" })
+wait(function()
+  return first.tab ~= nil
+end)
+local second = tools.compare({ cwd = fixture.root, from = "HEAD", to = "HEAD" })
+wait(function()
+  return second.tab ~= nil
+end)
+assert(tools.close_compares())
+assert(
+  first.closed
+    and second.closed
+    and not api.nvim_tabpage_is_valid(first.tab)
+    and not api.nvim_tabpage_is_valid(second.tab)
+)
+assert(api.nvim_get_current_tabpage() == origin and api.nvim_get_current_win() == editor_win)
+assert(vim.wo[editor_win].signcolumn == "yes:2")
+
+view = tools.compare({ cwd = fixture.root, from = "HEAD", to = "HEAD" })
+wait(function()
+  return view.tab ~= nil
+end)
+vim.cmd.tabonly()
+local closed, close_err = tools.close_compares()
+assert(not closed and close_err and view:alive(), "The last Compare tab must block session capture")
+vim.cmd.tabnew()
+local fallback = api.nvim_get_current_tabpage()
+api.nvim_set_current_tabpage(view.tab)
+assert(tools.close_compares())
+assert(view.closed and api.nvim_get_current_tabpage() == fallback)
+
 fixture:cleanup()
 print(
   "git views: staged/working and revision diffs, directory trees, root commits, unsaved buffers and three-way resolution passed"

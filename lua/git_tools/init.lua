@@ -33,6 +33,7 @@ local function complete_command(lead, line, cursor)
   while ok and parsed.nextcmd ~= "" do
     ok, parsed = pcall(vim.api.nvim_parse_cmd, parsed.nextcmd, {})
   end
+
   if not ok or parsed.cmd ~= "GitTools" then
     return {}
   end
@@ -50,9 +51,11 @@ local function complete_command(lead, line, cursor)
   if lead == "" then
     return candidates
   end
+
   if vim.tbl_contains(vim.opt.wildoptions:get(), "fuzzy") then
     return vim.fn.matchfuzzy(candidates, lead)
   end
+
   return vim.tbl_filter(function(candidate)
     return vim.startswith(candidate, lead)
   end, candidates)
@@ -99,6 +102,14 @@ end
 
 function M.toggle_compare(opts)
   return require("git_tools.view").toggle(opts)
+end
+
+function M.close_compares()
+  local views = package.loaded["git_tools.view"]
+  if not views then
+    return true
+  end
+  return views.close_all()
 end
 
 function M.diffthis(revision)

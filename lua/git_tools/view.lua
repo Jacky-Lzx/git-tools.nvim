@@ -218,21 +218,28 @@ function View:cleanup()
   end
   M.active[self] = nil
 end
-function View:close()
-  if self.tab and api.nvim_tabpage_is_valid(self.tab) then
+local function close_view(view)
+  if view.tab and api.nvim_tabpage_is_valid(view.tab) then
     local previous = api.nvim_get_current_tabpage()
-    api.nvim_set_current_tabpage(self.tab)
+    api.nvim_set_current_tabpage(view.tab)
     local ok, err = pcall(vim.cmd, "tabclose")
-    if not ok then
-      git.notify(err)
-      return
-    end
-    if api.nvim_tabpage_is_valid(previous) and previous ~= self.tab then
+    if api.nvim_tabpage_is_valid(previous) and previous ~= view.tab then
       api.nvim_set_current_tabpage(previous)
     end
+    if not ok then
+      return nil, err
+    end
   end
-  self:cleanup()
+  view:cleanup()
   return true
+end
+
+function View:close()
+  local closed, err = close_view(self)
+  if not closed then
+    git.notify(err)
+  end
+  return closed
 end
 
 function View:decorate_panel()
@@ -904,6 +911,43 @@ function M.toggle(opts)
     end
   end
   return M.open(opts)
+end
+
+function M.close_all()
+  local views, tabs = vim.tbl_keys(M.active), {}
+  for _, view in ipairs(views) do
+    if view.tab then
+      tabs[view.tab] = view
+    end
+  end
+
+  local current = api.nvim_get_current_tabpage()
+  local destination = current
+  while tabs[destination] do
+    destination = tabs[destination].origin_tab
+  end
+  if not api.nvim_tabpage_is_valid(destination) then
+    for _, tab in ipairs(api.nvim_list_tabpages()) do
+      if not tabs[tab] then
+        destination = tab
+        break
+      end
+    end
+  end
+  if not api.nvim_tabpage_is_valid(destination) then
+    return nil, "No editing tab is available outside GitTools Compare"
+  end
+  if destination ~= current then
+    api.nvim_set_current_tabpage(destination)
+  end
+
+  for _, view in ipairs(views) do
+    local closed, err = close_view(view)
+    if not closed then
+      return nil, err
+    end
+  end
+  return true
 end
 
 function M.dispose()
