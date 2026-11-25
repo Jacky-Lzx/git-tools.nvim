@@ -317,7 +317,6 @@ function View:render_panel()
   self:decorate_panel()
   local count = #self.items
   self.panel_footer:update({ right = count .. (count == 1 and " file" or " files") })
-  vim.wo[self.panel_win].winbar = " Files (" .. count .. ")"
 end
 
 function View:panel_row()
@@ -428,7 +427,7 @@ function View:layout(merge)
       list = false,
       spell = false,
       cursorline = true,
-      winbar = " Files",
+      winbar = "%=Changed Files%=",
     }
     for name, value in pairs(panel_opts) do
       vim.wo[self.panel_win][name] = value
