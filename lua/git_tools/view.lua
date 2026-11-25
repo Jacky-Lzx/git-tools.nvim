@@ -580,11 +580,12 @@ function View:select(index, keep_focus)
         labels[1], labels[2] = labels[2], labels[1]
       end
       for i, win in ipairs(self.windows) do
-        require("git_tools.diff.theme").window(win)
         api.nvim_win_call(win, function()
           vim.cmd("diffoff")
         end)
         api.nvim_win_set_buf(win, buffers[i])
+        -- A reused buffer can restore its own window-local highlight mappings.
+        require("git_tools.diff.theme").window(win)
         api.nvim_win_call(win, function()
           vim.cmd("diffthis")
         end)

@@ -20,7 +20,7 @@ git("init", "-qb", "main")
 git("config", "user.name", "Fixture")
 git("config", "user.email", "fixture@example.invalid")
 vim.fn.writefile({ "base" }, root .. "/a.txt")
-vim.fn.writefile({ "other" }, root .. "/b.txt")
+vim.fn.writefile({ "other" }, root .. "/README.md")
 git("add", ".")
 git("commit", "-qm", "initial")
 local initial = git("rev-parse", "HEAD"):gsub("\n$", "")
@@ -176,7 +176,9 @@ view:close()
 vim.cmd.tcd(vim.fn.fnameescape(original_cwd))
 api.nvim_buf_delete(actual, { force = true })
 git("reset", "--hard", initial)
-vim.cmd.edit(root .. "/b.txt")
+vim.cmd.edit(root .. "/README.md")
+local editor = api.nvim_get_current_win()
+local editor_highlights = vim.wo[editor].winhighlight
 local unsaved = api.nvim_get_current_buf()
 api.nvim_buf_set_lines(unsaved, 0, -1, false, { "buffer only" })
 view = tools.compare({ cwd = root })
@@ -184,9 +186,16 @@ wait(function()
   return view.current ~= nil
 end)
 assert(
-  view.current.path == "b.txt" and text(view.windows[2]) == "buffer only",
+  view.current.path == "README.md" and text(view.windows[2]) == "buffer only",
   "File panel must include buffer-only changes"
 )
+local working_pane = view.windows[2]
+assert(api.nvim_win_get_buf(working_pane) == unsaved, "Compare must reuse the open Markdown buffer")
+assert(
+  vim.wo[working_pane].winhighlight:find("DiffAdd:GitToolsDiffAdd", 1, true),
+  "The working-tree pane must retain subtle diff colors after switching to an open file"
+)
+assert(vim.wo[editor].winhighlight == editor_highlights, "Compare must preserve the original editor window's colors")
 view:close()
 api.nvim_buf_delete(unsaved, { force = true })
 git("checkout", "-qb", "side")
