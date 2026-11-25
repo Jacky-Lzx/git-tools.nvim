@@ -38,6 +38,7 @@ function M.dispose()
     local keep = api.nvim_buf_is_valid(session.buf)
       and vim.bo[session.buf].buftype ~= "terminal"
       and vim.bo[session.buf].modified
+
     session:close(false, keep)
   end
 end
@@ -68,11 +69,13 @@ function M.open(opts)
   if vim.fn.executable(opts.command) ~= 1 then
     return failure("Executable not found: " .. opts.command)
   end
+
   local cwd = opts.cwd
   if not cwd then
     local path = api.nvim_buf_get_name(0)
     cwd = vim.bo.buftype == "" and path ~= "" and vim.fs.dirname(path) or vim.fn.getcwd()
   end
+
   cwd = vim.fn.fnamemodify(cwd, ":p")
   if vim.fn.isdirectory(cwd) ~= 1 then
     return failure("Terminal directory does not exist: " .. cwd)
@@ -85,6 +88,7 @@ function M.open(opts)
   )
 
   local session = { buf = api.nvim_create_buf(false, true), origin = api.nvim_get_current_win(), cwd = cwd }
+
   function session:resize()
     if not self.closed and api.nvim_win_is_valid(self.win) then
       api.nvim_win_set_config(self.win, geometry(opts))
@@ -93,47 +97,60 @@ function M.open(opts)
       end
     end
   end
+
   function session:close(update, keep_buffer)
     if self.closed then
       return
     end
+
     self.closed = true
     if M.current == self then
       M.current = nil
     end
+
     local focused = self.win and api.nvim_get_current_win() == self.win
     if self.group then
       api.nvim_del_augroup_by_id(self.group)
     end
+
     if self.job and not self.exited then
       pcall(vim.fn.jobstop, self.job)
     end
+
     if self.theme then
       self.theme:close()
     end
+
     if self.win and api.nvim_win_is_valid(self.win) then
       pcall(api.nvim_win_close, self.win, not keep_buffer)
     end
+
     if not keep_buffer and api.nvim_buf_is_valid(self.buf) then
       pcall(api.nvim_buf_delete, self.buf, { force = true })
     end
+
     if focused and api.nvim_win_is_valid(self.origin) then
       api.nvim_set_current_win(self.origin)
     end
+
     if focused then
       vim.cmd.stopinsert()
     end
+
     if update ~= false then
       vim.schedule(refresh)
     end
   end
+
   vim.bo[session.buf].bufhidden = "wipe"
   vim.bo[session.buf].swapfile = false
+
   local opened, win = pcall(api.nvim_open_win, session.buf, true, win_config)
   if not opened then
     session:close(false)
     return failure(tostring(win))
   end
+
   session.win = win
   M.current = session
   for name, value in pairs({
@@ -151,6 +168,7 @@ function M.open(opts)
   }) do
     vim.wo[win][name] = value
   end
+
   session.group = api.nvim_create_augroup("GitToolsLazygit" .. session.buf, { clear = true })
   api.nvim_create_autocmd("VimResized", {
     group = session.group,
@@ -158,6 +176,7 @@ function M.open(opts)
       session:resize()
     end,
   })
+
   api.nvim_create_autocmd("WinClosed", {
     group = session.group,
     pattern = tostring(win),
@@ -165,6 +184,7 @@ function M.open(opts)
       session:close()
     end,
   })
+
   api.nvim_create_autocmd("BufWipeout", {
     group = session.group,
     buffer = session.buf,
@@ -172,18 +192,22 @@ function M.open(opts)
       session:close()
     end,
   })
+
   api.nvim_create_autocmd("VimLeavePre", {
     group = session.group,
     callback = function()
       session:close(false)
     end,
   })
+
   vim.keymap.set({ "n", "t" }, "<C-g>", function()
     session:close()
   end, { buffer = session.buf, silent = true, desc = "Close Lazygit" })
+
   vim.keymap.set("n", "q", function()
     session:close()
   end, { buffer = session.buf, silent = true, desc = "Close Lazygit" })
+
   -- Keep wheel input from moving the terminal viewport or reaching LazyGit.
   for _, direction in ipairs({ "Up", "Down", "Left", "Right" }) do
     -- Shift-wheel uses distinct keycodes, even when the host emits horizontal events.
@@ -196,6 +220,7 @@ function M.open(opts)
       )
     end
   end
+
   session.theme = require("git_tools.lazygit.theme").prepare(vim.tbl_extend("force", {}, opts, { cwd = cwd }))
   local argv = vim.list_extend({ opts.command }, session.theme and session.theme.args or opts.args)
   local started, job = pcall(vim.fn.termopen, argv, {
@@ -206,6 +231,7 @@ function M.open(opts)
         if session.closed then
           return
         end
+
         session.exited = true
         if code == 0 then
           session:close()
@@ -213,6 +239,7 @@ function M.open(opts)
           if api.nvim_get_current_win() == session.win then
             vim.cmd.stopinsert()
           end
+
           require("git_tools.git").notify(
             "Lazygit exited with code " .. code .. "; terminal output retained (q closes)"
           )
@@ -220,16 +247,20 @@ function M.open(opts)
       end)
     end,
   })
+
   if not started or job <= 0 then
     session:close(false)
     return failure("Unable to start Lazygit: " .. tostring(job))
   end
+
   session.job = job
   if session.theme then
     session.theme:attach(session)
   end
+
   vim.bo[session.buf].filetype = "git-tools-lazygit"
   vim.cmd.startinsert()
+
   return session
 end
 

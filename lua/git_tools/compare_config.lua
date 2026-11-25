@@ -31,9 +31,11 @@ end
 
 local function resolve_panel(spec)
   local bindings = keymaps.resolve(spec, { name = "compare.keymap.panel", actions = actions, check_aliases = true })
+
   for _, binding in ipairs(bindings) do
     describe_binding(binding)
   end
+
   table.sort(bindings, function(a, b)
     local left = a.primary and actions[a.primary].order or 5
     local right = b.primary and actions[b.primary].order or 5
