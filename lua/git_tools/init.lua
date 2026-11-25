@@ -2,10 +2,6 @@
 local M = { diff = require("git_tools.diff") }
 local configured = false
 
-function M.get_config(...)
-  return require("git_tools.config").instance():get(...)
-end
-
 -- Snapshot only already-loaded providers; never start Git or create a view.
 function M.get_state(opts)
   opts = opts or {}
@@ -95,7 +91,7 @@ function M.setup(opts)
   configured = true
 end
 
-function M.dispose()
+function M._dispose()
   configured = false
 
   for _, name in ipairs({ "buffer", "view", "lazygit", "revisions" }) do

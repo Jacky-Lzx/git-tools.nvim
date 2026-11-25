@@ -136,7 +136,7 @@ assert(vim.fn.maparg("<M-z>", "n", false, true).callback == old_mapping)
 handle = diff.render(ctx, patch, { backend = "vim", wrap = false })
 assert(not vim.wo[win].wrap, "Per-call false overrides the default")
 handle:close()
-git.dispose()
+git._dispose()
 
 local huge = native.prepare(diff.unified({ string.rep("a", 40000) }, { string.rep("b", 40000) }), {
   layout = "side_by_side",

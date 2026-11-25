@@ -12,6 +12,6 @@ local state = plugin.get_state()
 assert(state.initialized and state.compare == false)
 state.signs = true
 assert(plugin.get_state().signs == false)
-plugin.dispose()
+plugin._dispose()
 assert(not plugin.get_state().initialized and plugin.get_state().signs == false)
 print("Git public state: cold reads, resource isolation and snapshot ownership passed")

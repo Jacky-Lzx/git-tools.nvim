@@ -103,7 +103,7 @@ assert(vim.deep_equal(complete("compare "), { "HEAD", "HEAD~1" }))
 local failed_reads = reads
 assert(#complete("compare ma") == 0 and reads == failed_reads, "Cache failed repository lookups")
 git.read = read
-plugin.dispose()
+plugin._dispose()
 api.nvim_set_current_dir(root)
 first:cleanup()
 second:cleanup()

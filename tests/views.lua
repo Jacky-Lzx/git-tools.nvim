@@ -408,7 +408,7 @@ wait(function()
   return view.panel ~= nil
 end)
 assert(#api.nvim_buf_get_keymap(view.panel, "n") == 0, "An empty panel keymap must replace legacy and default mappings")
-tools.dispose()
+tools._dispose()
 view = tools.compare({ cwd = fixture.root, from = "HEAD", to = "HEAD" })
 wait(function()
   return view.panel ~= nil

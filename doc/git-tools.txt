@@ -48,18 +48,9 @@ Options are passed to require("git_tools").setup(opts). The quick start is an
 example, not a dump of defaults. Detailed configuration and examples follow
 below.
 
-git_tools.get_config(...)                              *git-tools-get-config*
-    Get a copy of the current configuration, or the defaults before setup()
-    and after dispose(). Pass keys separately to read a nested value, e.g.
-    get_config("buffer", "signs"). Every read preserves false and returns
-    nil for missing keys. Setup resolves legacy compare.panel_keys to
-    compare.keymap.panel. When buffer features are configured, toggle()
-    validates and applies the option, publishes the snapshot, and then
-    redraws affected buffers. Invalid values raise an error before applying.
-
-    `:GitTools config` prints the full snapshot. Use an option path, e.g.
-    `:GitTools config buffer.signs`, to inspect a single value. Option paths
-    can be completed on the command line.
+`:GitTools config` prints the current configuration. Use an option path,
+such as `:GitTools config buffer.signs`, to inspect a single value. Missing
+paths display nil. Option paths support command-line completion.
 
 API                                                            *git-tools-api*
 
@@ -131,6 +122,8 @@ git_tools.setup({buffer={...}})                             *git-tools-buffer*
     toggle_overlay(buf), get_hunks(buf), toggle(name,optional_boolean).
     toggle() accepts boolean buffer settings such as signs, numhl, word_diff
     and line_blame. Omit the value to invert the option or supply a boolean.
+    When buffer features are configured, toggle() validates and saves the
+    option before redrawing the affected buffers.
 
 git_tools.stage_hunk(opts) / unstage_hunk(opts) / reset_hunk(opts)
                                                              *git-tools-hunks*
@@ -413,10 +406,11 @@ registrations.
 Setup validates buffer, compare, diff and terminal configuration before
 applying fresh default-based options. `buffer = false` releases existing
 buffer observers.
-`dispose()` cancels buffer/view work, closes owned views/terminal resources,
-releases unchanged owned mappings/commands and resets module options. Modified
-user content is not force-closed; blocked views still release background work.
-Disposal is repeatable; explicit setup/actions can initialize again.
+Internal teardown cancels buffer and view work, closes owned views and
+terminals, releases unchanged owned mappings and commands, and resets module
+options. It preserves modified user content and releases background work even
+when a view stays open. Teardown is repeatable. Explicit setup or actions can
+initialize the plugin again.
 
 ==============================================================================
 READ-ONLY STATE                          *git-tools-reference-read-only-state*

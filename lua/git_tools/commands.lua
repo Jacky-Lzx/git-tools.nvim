@@ -12,16 +12,17 @@ local function revision_candidates()
   return vim.list_extend({ "HEAD", default_compare_revision }, require("git_tools.revisions").list())
 end
 
-local function config_value(git, path)
+local function config_value(path)
+  local store = config.instance()
   if not path or path == "" then
-    return git.get_config()
+    return store:get()
   end
-  return git.get_config(unpack(vim.split(path, ".", { plain = true })))
+  return store:get(unpack(vim.split(path, ".", { plain = true })))
 end
 
-local function config_candidates(git, lead)
+local function config_candidates(lead)
   local prefix = lead:match("^(.*%.)") or ""
-  local section = config_value(git, prefix:sub(1, -2))
+  local section = config_value(prefix:sub(1, -2))
   local paths = {}
   if type(section) == "table" then
     for key in pairs(section) do
@@ -109,11 +110,11 @@ function M.resolve(git, opts)
         name = "config",
         run = function(command)
           assert(#command.fargs <= 2, "Usage: GitTools config [option.path]")
-          vim.api.nvim_echo({ { vim.inspect(config_value(git, command.fargs[2])) } }, true, {})
+          vim.api.nvim_echo({ { vim.inspect(config_value(command.fargs[2])) } }, true, {})
         end,
         complete = {
           function(ctx)
-            return config_candidates(git, ctx.lead)
+            return config_candidates(ctx.lead)
           end,
         },
       },

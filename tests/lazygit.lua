@@ -72,11 +72,9 @@ wait(function()
 end)
 assert(vim.deep_equal(vim.fn.readfile(record), { root }), "A one-shot launch must inherit setup and replace its args")
 assert(vim.fn.filereadable(record .. ".inherited-env") == 0, "A one-shot environment must replace setup's environment")
-assert(
-  vim.deep_equal(tools.get_config("lazygit", "args"), opts.args),
-  "A one-shot launch must leave setup settings intact"
-)
-assert(tools.get_config("lazygit", "env", "GIT_TOOLS_LAZYGIT_SAVED_ENV") == "saved")
+local store = require("git_tools.config").instance()
+assert(vim.deep_equal(store:get("lazygit", "args"), opts.args), "A one-shot launch must leave setup settings intact")
+assert(store:get("lazygit", "env", "GIT_TOOLS_LAZYGIT_SAVED_ENV") == "saved")
 local job = session.job
 api.nvim_win_close(session.win, true)
 wait(function()
