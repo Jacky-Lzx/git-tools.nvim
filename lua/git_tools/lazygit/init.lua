@@ -2,6 +2,7 @@
 local api = vim.api
 local M = {}
 local config = require("git_tools.config").section_instance("lazygit")
+local lazygit_config = config:section("lazygit")
 
 local function dimension(value, available)
   return math.max(1, math.min(available, math.floor(value <= 1 and available * value or value)))
@@ -10,6 +11,7 @@ end
 local function geometry(opts)
   local columns, rows = math.max(1, vim.o.columns - 2), math.max(1, vim.o.lines - 4)
   local width, height = dimension(opts.width, columns), dimension(opts.height, rows)
+
   return {
     relative = "editor",
     width = width,
@@ -22,6 +24,7 @@ end
 local function refresh()
   -- checktime respects modified buffers; it never force-reloads unsaved text.
   pcall(vim.cmd, "checktime")
+
   local buffers = package.loaded["git_tools.buffer"]
   if buffers then
     for buf in pairs(buffers.states) do
@@ -54,19 +57,24 @@ function M.open(opts)
     local session = M.current
     if api.nvim_win_is_valid(session.win) then
       api.nvim_set_current_win(session.win)
+
       if not session.exited then
         vim.cmd.startinsert()
       end
+
       return session
     end
+
     session:close()
   end
-  opts = vim.tbl_extend("force", config:get("lazygit"), opts or {})
-  config:validate({ "lazygit" }, opts)
+
+  opts = lazygit_config:merge(opts or {})
+
   local function failure(message)
     require("git_tools.git").notify(message)
     return nil, message
   end
+
   if vim.fn.executable(opts.command) ~= 1 then
     return failure("Executable not found: " .. opts.command)
   end
@@ -79,11 +87,13 @@ function M.open(opts)
   if vim.fn.isdirectory(cwd) ~= 1 then
     return failure("Terminal directory does not exist: " .. cwd)
   end
+
   local config = vim.tbl_extend(
     "force",
     geometry(opts),
     { relative = "editor", style = "minimal", border = opts.border, title = " Lazygit ", title_pos = "center" }
   )
+
   local session = { buf = api.nvim_create_buf(false, true), origin = api.nvim_get_current_win(), cwd = cwd }
   function session:resize()
     if not self.closed and api.nvim_win_is_valid(self.win) then

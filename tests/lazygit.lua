@@ -6,6 +6,7 @@ root = vim.uv.fs_realpath(root)
 local command, record = root .. "/fake lazygit", root .. "/record"
 vim.fn.writefile({
   "#!/bin/sh",
+  '[ -z "$GIT_TOOLS_LAZYGIT_SAVED_ENV" ] || : > "$GIT_TOOLS_LAZYGIT_RECORD.inherited-env"',
   'printf "%s\\n" "$PWD" "$@" > "$GIT_TOOLS_LAZYGIT_RECORD"',
   "printf 'fake-lazygit-ready\\n'",
   "while IFS= read -r key; do",
@@ -60,17 +61,21 @@ assert(not api.nvim_buf_is_valid(session.buf) and not api.nvim_win_is_valid(sess
 assert(api.nvim_get_current_win() == origin and api.nvim_get_current_buf() == source)
 assert(api.nvim_buf_get_lines(source, 0, -1, false)[1] == "unsaved source" and vim.bo[source].modified)
 
-tools.setup({ buffer = false, lazygit = opts })
+local defaults = vim.deepcopy(opts)
+defaults.env.GIT_TOOLS_LAZYGIT_SAVED_ENV = "saved"
+tools.setup({ buffer = false, lazygit = defaults })
 assert(vim.fn.delete(record) == 0)
-session = assert(tools.lazygit({ args = {} }))
+session = assert(tools.lazygit({ args = {}, env = opts.env }))
 wait(function()
   return vim.fn.filereadable(record) == 1 and #vim.fn.readfile(record) > 0
 end)
 assert(vim.deep_equal(vim.fn.readfile(record), { root }), "A one-shot launch must inherit setup and replace its args")
+assert(vim.fn.filereadable(record .. ".inherited-env") == 0, "A one-shot environment must replace setup's environment")
 assert(
   vim.deep_equal(tools.get_config("lazygit", "args"), opts.args),
   "A one-shot launch must leave setup settings intact"
 )
+assert(tools.get_config("lazygit", "env", "GIT_TOOLS_LAZYGIT_SAVED_ENV") == "saved")
 local job = session.job
 api.nvim_win_close(session.win, true)
 wait(function()

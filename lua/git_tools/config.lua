@@ -17,6 +17,7 @@ local definition = {
     fields = {
       command = { default = "lazygit", validate = string_value },
       args = { default = {}, validate = validators.list_of(string_value), replace = true },
+      env = { replace = true },
       width = { default = 0.9, validate = terminal_dimension },
       height = { default = 0.9, validate = terminal_dimension },
       border = { default = "rounded" },
