@@ -4,10 +4,6 @@ local M = {}
 local config = require("git_tools.config").section_instance("lazygit")
 
 local function dimension(value, available)
-  assert(
-    type(value) == "number" and value > 0 and (value <= 1 or value % 1 == 0),
-    "Terminal size must be a positive fraction or integer"
-  )
   return math.max(1, math.min(available, math.floor(value <= 1 and available * value or value)))
 end
 
@@ -35,20 +31,11 @@ local function refresh()
 end
 
 function M.resolve(opts)
-  assert(opts == nil or type(opts) == "table", "lazygit options must be a table")
-  local candidate = vim.tbl_extend("force", config:resolve().lazygit, vim.deepcopy(opts or {}))
-  assert(type(candidate.command) == "string", "LazyGit command must be a string")
-  assert(type(candidate.args) == "table" and vim.islist(candidate.args), "LazyGit args must be a list")
-  for _, arg in ipairs(candidate.args) do
-    assert(type(arg) == "string", "LazyGit arguments must be strings")
-  end
-  dimension(candidate.width, 100)
-  dimension(candidate.height, 100)
-  return candidate
+  return config:resolve({ lazygit = opts }).lazygit
 end
 
 function M.configure(opts)
-  config:change({ "lazygit" }, M.resolve(opts))
+  config:configure({ lazygit = opts })
 end
 
 function M.dispose()
@@ -75,11 +62,7 @@ function M.open(opts)
     session:close()
   end
   opts = vim.tbl_extend("force", config:get("lazygit"), opts or {})
-  assert(type(opts.command) == "string", "LazyGit command must be an executable name or path")
-  assert(type(opts.args) == "table" and vim.islist(opts.args), "LazyGit args must be a list")
-  for _, arg in ipairs(opts.args) do
-    assert(type(arg) == "string", "LazyGit arguments must be strings")
-  end
+  config:validate({ "lazygit" }, opts)
   local function failure(message)
     require("git_tools.git").notify(message)
     return nil, message

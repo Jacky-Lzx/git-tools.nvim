@@ -78,14 +78,13 @@ function M.setup(opts)
   config:configure(opts, function(candidate)
     local panel_keymap = compare.resolve(candidate.compare)
     local diff_options = window.resolve(candidate.diff)
-    local terminal_options = lazygit.resolve(candidate.lazygit)
     local commands = require("git_tools.commands")
     local command = commands.resolve(M, candidate.command)
 
     commands.setup(command)
     compare.configure(panel_keymap)
     window.configure(diff_options)
-    lazygit.configure(terminal_options)
+    lazygit.configure(candidate.lazygit)
     if candidate.buffer == false then
       buffers.dispose()
     else

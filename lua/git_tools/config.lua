@@ -4,11 +4,24 @@ local instance
 
 local validators = require("base_tools.config.validators")
 local boolean = validators.type("boolean")
+local string_value = validators.type("string")
+
+local function terminal_dimension(value)
+  return type(value) == "number" and value > 0 and (value <= 1 or value % 1 == 0),
+    "must be a positive fraction or integer"
+end
 
 local definition = {
   diff = { fields = { wrap = { default = false, validate = boolean } } },
   lazygit = {
-    default = { command = "lazygit", args = {}, width = 0.9, height = 0.9, border = "rounded", theme = true },
+    fields = {
+      command = { default = "lazygit", validate = string_value },
+      args = { default = {}, validate = validators.list_of(string_value), replace = true },
+      width = { default = 0.9, validate = terminal_dimension },
+      height = { default = 0.9, validate = terminal_dimension },
+      border = { default = "rounded" },
+      theme = { default = true },
+    },
   },
   buffer = {
     default_choice = "enabled",

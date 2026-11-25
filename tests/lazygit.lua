@@ -59,7 +59,18 @@ end)
 assert(not api.nvim_buf_is_valid(session.buf) and not api.nvim_win_is_valid(session.win))
 assert(api.nvim_get_current_win() == origin and api.nvim_get_current_buf() == source)
 assert(api.nvim_buf_get_lines(source, 0, -1, false)[1] == "unsaved source" and vim.bo[source].modified)
-session = assert(tools.lazygit(opts))
+
+tools.setup({ buffer = false, lazygit = opts })
+assert(vim.fn.delete(record) == 0)
+session = assert(tools.lazygit({ args = {} }))
+wait(function()
+  return vim.fn.filereadable(record) == 1 and #vim.fn.readfile(record) > 0
+end)
+assert(vim.deep_equal(vim.fn.readfile(record), { root }), "A one-shot launch must inherit setup and replace its args")
+assert(
+  vim.deep_equal(tools.get_config("lazygit", "args"), opts.args),
+  "A one-shot launch must leave setup settings intact"
+)
 local job = session.job
 api.nvim_win_close(session.win, true)
 wait(function()
